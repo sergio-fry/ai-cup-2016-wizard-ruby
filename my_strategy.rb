@@ -19,50 +19,47 @@ class MyStrategy
     initialize_strategy(me, game)
     initialize_tick(me, world, game, move)
 
-    # Постоянно двигаемся из-стороны в сторону, чтобы по нам было сложнее попасть.
-    # Считаете, что сможете придумать более эффективный алгоритм уклонения? Попробуйте! ;)
-    move.strafe_speed =  (random_bool ? 1 : -1) * game.wizard_strafe_speed
-
-    # Если осталось мало жизненной энергии, отступаем к предыдущей ключевой точке на линии.
-    if me.life < me.max_life * LOW_HP_FACTOR
-      go_to previous_waypoint
-
-      return
-    end
-
-    nearest_target = get_nearest_target
-
-    if nearest_target != nil
-      distance = distance_to(nearest_target)
-
-      if distance <= @me.cast_range
-        angle = @me.angle_to(nearest_target.x, nearest_target.y)
-
-        move.turn = angle
-
-        if angle.abs < @game.staff_sector / 2
-          @move.action = ActionType::MAGIC_MISSILE
-          @move.cast_angle = angle
-          @move.min_cast_distance = distance - nearest_target.radius + @game.magic_missile_radius
-        end
-
-        return
-      end
-    end
 
     go_to next_waypoint
+
+    attack nearest_target
+
+    # Постоянно двигаемся из-стороны в сторону, чтобы по нам было сложнее попасть.
+    # Считаете, что сможете придумать более эффективный алгоритм уклонения? Попробуйте! ;)
+    # move.strafe_speed = (random_bool ? 1 : -1) * game.wizard_strafe_speed
+
+    # Если осталось мало жизненной энергии, отступаем к предыдущей ключевой точке на линии.
+    # back_to previous_waypoint if me.life < me.max_life * LOW_HP_FACTOR
   end
 
   private
 
-  def distance_to(point)
-    p1 = Point2D.new(point.x, point.y)
-    p2 = Point2D.new(@me.x, @me.y)
-
-    p1.distance_to(p2)
+  def stop
+    @move.speed = 0
+    @move.strafe_speed = 0
   end
 
-  def get_nearest_target
+  def attack(unit)
+    return if unit.nil?
+    return if distance_to(unit) > @me.cast_range
+
+    turn_to unit
+
+    if angle_to(unit).abs < @game.staff_sector / 2
+      @move.action = ActionType::MAGIC_MISSILE
+      @move.cast_angle = angle_to unit
+      @move.min_cast_distance = distance_to(unit) - unit.radius + @game.magic_missile_radius
+      back_from unit
+    end
+  end
+
+  def distance_to(point)
+    p1 = Point2D.new(point.x, point.y)
+
+    p1.distance_to(@me)
+  end
+
+  def nearest_target
     targets = []
     targets.concat @world.buildings
     targets.concat @world.wizards
@@ -70,14 +67,9 @@ class MyStrategy
 
     targets = targets.reject do |target|
       target.faction == Faction::NEUTRAL || target.faction == @me.faction
-    end
-
-    targets = targets.sort do |target|
+    end.sort do |target|
       distance_to(target)
     end
-
-    closest = distance_to(targets.first) rescue nil
-    farest = distance_to(targets.last) rescue nil
 
     targets.first
   end
@@ -123,12 +115,45 @@ class MyStrategy
     first_waypoint
   end
 
-  def go_to(point)
-    angle = @me.get_angle_to(point.x, point.y)
-    @move.turn = angle
+  def angle_to(point)
+    @me.get_angle_to(point.x, point.y)
+  end
 
-    if angle.abs < @game.staff_sector / 4
-      @move.speed = @game.wizard_forward_speed
+  def turn_to(point)
+    @move.turn = angle_to point
+  end
+
+  def turned_to?(point)
+    angle_to(point).abs < @game.staff_sector / 4
+  end
+
+  def turn_from(point)
+    @move.turn = -angle_to(point)
+  end
+
+  def turned_from?(point)
+    true
+  end
+
+  def go_to(point, speed: nil)
+    turn_to point
+
+    if turned_to?(point)
+      @move.speed = (speed || @game.wizard_forward_speed)
+    end
+  end
+
+  def back_to(point)
+    turn_from point
+
+    @move.speed = -@game.wizard_backward_speed
+  end
+
+  def back_from(point, speed: nil)
+    turn_to point
+
+    if turned_to?(point)
+      @move.speed = -(speed || @game.wizard_backward_speed)
     end
   end
 
@@ -137,6 +162,8 @@ class MyStrategy
     @world = world
     @game = game
     @move = move
+
+    @move.action = ActionType::NONE
   end
 
   def initialize_strategy(me, game)
@@ -206,6 +233,10 @@ class MyStrategy
 
     def distance_to(point)
       Math::hypot(point.x - @x, point.y - @y)
+    end
+
+    def mirror
+      self.class.new -x, -y
     end
   end
 end
