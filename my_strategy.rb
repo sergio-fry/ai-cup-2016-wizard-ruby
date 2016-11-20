@@ -4,6 +4,8 @@ require './model/move'
 require './model/world'
 
 class MyStrategy
+  LOW_HP_FACTOR = 0.25
+
   def initialize
     @waypoints_by_lane = {}
   end
@@ -14,14 +16,64 @@ class MyStrategy
   # @param [Move] move
   def move(me, world, game, move)
     initialize_strategy(me, game)
+    initialize_tick(me, world, game, move)
+
+    # Постоянно двигаемся из-стороны в сторону, чтобы по нам было сложнее попасть.
+    # Считаете, что сможете придумать более эффективный алгоритм уклонения? Попробуйте! ;)
+    move.strafe_speed =  (random_bool ? 1 : -1) * game.wizard_strafe_speed
+
+    # Если осталось мало жизненной энергии, отступаем к предыдущей ключевой точке на линии.
+    if me.life < me.max_life * LOW_HP_FACTOR
+      go_to previous_waypoint
+
+      return
+    end
 
     move.speed = game.wizard_forward_speed
-    move.strafe_speed = game.wizard_strafe_speed
+    #move.strafe_speed = game.wizard_strafe_speed
     move.turn = game.wizard_max_turn_angle
     move.action = ActionType::MAGIC_MISSILE
   end
 
   private
+
+  def previous_waypoint
+    first_waypoint = @waypoints[0]
+
+    waypoint_index = @waypoints.size - 1
+
+    while waypoint_index > 0
+      waypoint_index -= 1
+
+      waypoint = @waypoints[waypoint_index]
+
+      if waypoint.distance_to(me) <= WAYPOINT_RADIUS
+        return @waypoints[waypoint_index - 1]
+      end
+
+      if first_waypoint.distance_to(waypoint) < first_waypoint.distance_to(me)
+        return waypoint
+      end
+    end
+
+    first_waypoint
+  end
+
+  def go_to(point)
+    angle = @me.get_angle_to(@me.x, @me.y)
+    @move.turn = angle
+
+    if angle.abs < @game.staff_sector / 4
+      move.speed = @game.wizard_forward_speed
+    end
+  end
+
+  def initialize_tick(me, world, game, move)
+    @me = me
+    @world = world
+    @game = game
+    @move = move
+  end
 
   def initialize_strategy(me, game)
     if @random == nil
@@ -63,6 +115,17 @@ class MyStrategy
         Point2D.new(map_size - 200, map_size * 0.25),
         Point2D.new(map_size - 200, 200),
       ]
+
+      case me.owner_player_id
+      when 1, 2, 6, 7
+        @lane = LaneType::TOP
+      when 3, 8
+        @lane = LaneType::MIDDLE
+      when 4, 5, 9, 10
+        @lane = LaneType::BOTTOM
+      end
+
+      @waypoints = @waypoints_by_lane[@lane]
     else
     end
   end
@@ -78,7 +141,7 @@ class MyStrategy
       @x, @y = x, y
     end
 
-    def get_distance_to(point)
+    def distance_to(point)
       (point.x - x) ** 2 + (point.y - y) ** 2
     end
   end
