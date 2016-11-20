@@ -42,7 +42,7 @@ class MyStrategy
 
         if angle.abs < @game.staff_sector / 2
           @move.action = ActionType::MAGIC_MISSILE
-          @move.cast_angle angle
+          @move.cast_angle = angle
           @move.min_cast_distance = distance - nearest_target.radius + @game.magic_missile_radius
         end
 
@@ -68,11 +68,18 @@ class MyStrategy
     targets.concat @world.wizards
     targets.concat @world.minions
 
-    targets.reject do |target|
+    targets = targets.reject do |target|
       target.faction == Faction::NEUTRAL || target.faction == @me.faction
-    end.sort do |target|
-      @me.get_distance_to(target.x, target.y)
-    end.first
+    end
+
+    targets = targets.sort do |target|
+      distance_to(target)
+    end
+
+    closest = distance_to(targets.first) rescue nil
+    farest = distance_to(targets.last) rescue nil
+
+    targets.first
   end
 
   def next_waypoint
@@ -117,7 +124,7 @@ class MyStrategy
   end
 
   def go_to(point)
-    angle = @me.get_angle_to(@me.x, @me.y)
+    angle = @me.get_angle_to(point.x, point.y)
     @move.turn = angle
 
     if angle.abs < @game.staff_sector / 4
@@ -183,7 +190,6 @@ class MyStrategy
       end
 
       @waypoints = @waypoints_by_lane[@lane]
-    else
     end
   end
 
@@ -199,7 +205,7 @@ class MyStrategy
     end
 
     def distance_to(point)
-      (point.x - x) ** 2 + (point.y - y) ** 2
+      Math::hypot(point.x - @x, point.y - @y)
     end
   end
 end
