@@ -5,6 +5,7 @@ require './model/world'
 
 class MyStrategy
   LOW_HP_FACTOR = 0.25
+  WAYPOINT_RADIUS = 100
 
   def initialize
     @waypoints_by_lane = {}
@@ -29,29 +30,85 @@ class MyStrategy
       return
     end
 
-    move.speed = game.wizard_forward_speed
-    #move.strafe_speed = game.wizard_strafe_speed
-    move.turn = game.wizard_max_turn_angle
-    move.action = ActionType::MAGIC_MISSILE
+    nearest_target = get_nearest_target
+
+    if nearest_target != nil
+      distance = distance_to(nearest_target)
+
+      if distance <= @me.cast_range
+        angle = @me.angle_to(nearest_target.x, nearest_target.y)
+
+        move.turn = angle
+
+        if angle.abs < @game.staff_sector / 2
+          @move.action = ActionType::MAGIC_MISSILE
+          @move.cast_angle angle
+          @move.min_cast_distance = distance - nearest_target.radius + @game.magic_missile_radius
+        end
+
+        return
+      end
+    end
+
+    go_to next_waypoint
   end
 
   private
 
+  def distance_to(point)
+    p1 = Point2D.new(point.x, point.y)
+    p2 = Point2D.new(@me.x, @me.y)
+
+    p1.distance_to(p2)
+  end
+
+  def get_nearest_target
+    targets = []
+    targets.concat @world.buildings
+    targets.concat @world.wizards
+    targets.concat @world.minions
+
+    targets.reject do |target|
+      target.faction == Faction::NEUTRAL || target.faction == @me.faction
+    end.sort do |target|
+      @me.get_distance_to(target.x, target.y)
+    end.first
+  end
+
+  def next_waypoint
+    last_waypoint_index = @waypoints.size - 1
+    last_waypoint = @waypoints[last_waypoint_index]
+
+    waypoint_index = 0
+    while waypoint_index < last_waypoint_index
+      waypoint_index += 1
+      waypoint = @waypoints[waypoint_index]
+
+      if waypoint.distance_to(@me) <= WAYPOINT_RADIUS
+        return @waypoints[waypoint_index + 1]
+      end
+
+      if last_waypoint.distance_to(waypoint) <= last_waypoint.distance_to(@me)
+        return waypoint
+      end
+    end
+
+    last_waypoint
+  end
+
   def previous_waypoint
     first_waypoint = @waypoints[0]
-
     waypoint_index = @waypoints.size - 1
 
     while waypoint_index > 0
       waypoint_index -= 1
-
       waypoint = @waypoints[waypoint_index]
 
-      if waypoint.distance_to(me) <= WAYPOINT_RADIUS
+      if waypoint.distance_to(@me) <= WAYPOINT_RADIUS
         return @waypoints[waypoint_index - 1]
       end
 
-      if first_waypoint.distance_to(waypoint) < first_waypoint.distance_to(me)
+      if first_waypoint.distance_to(waypoint) < first_waypoint.distance_to(@me)
         return waypoint
       end
     end
@@ -64,7 +121,7 @@ class MyStrategy
     @move.turn = angle
 
     if angle.abs < @game.staff_sector / 4
-      move.speed = @game.wizard_forward_speed
+      @move.speed = @game.wizard_forward_speed
     end
   end
 
