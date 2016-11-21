@@ -44,9 +44,9 @@ class MyStrategy
     initialize_strategy(me, game)
     initialize_tick(me, world, game, move)
 
-    #go_to next_waypoint
+    go_to next_waypoint
     attack nearest_enemy
-    #run_away if hurts?
+    run_away if hurts?
   end
 
   private
@@ -56,23 +56,26 @@ class MyStrategy
   end
 
   def run_away
-    go_to previous_waypoint
+    back_to previous_waypoint
   end
 
-  # FIXME: does not attck minions. Why???
+  def step_back_from(unit)
+    if previous_waypoint.nil?
+      back_from unit
+    else
+      back_to previous_waypoint
+    end
+  end
+
   def attack(unit)
     return if unit.nil?
-    #return if distance_to(unit) > @me.cast_range
-
-    puts "ATTACK: #{unit}"
+    return if distance_to(unit) > @me.cast_range
 
     turn_to unit
     @move.speed = 0
     @move.strafe_speed = 0
 
-    return
-
-    back_from unit if distance_to(unit) > @me.cast_range * 0.5
+    step_back_from unit if distance_to(unit) < @me.cast_range * 0.9
 
     if angle_to(unit).abs < @game.staff_sector / 2
       @move.action = ActionType::MAGIC_MISSILE
@@ -115,12 +118,10 @@ class MyStrategy
     units.flatten.reject do |unit|
       unit.faction == Faction::NEUTRAL || unit.faction == @me.faction
     end
-
-    @world.trees
   end
 
   def nearest_enemy
-    enemies.sort do |unit|
+    enemies.sort_by do |unit|
       distance_to(unit)
     end.first
   end
