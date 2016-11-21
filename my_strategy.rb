@@ -19,13 +19,9 @@ class Point2D
   end
 end
 
-class MyStrategy
+class CurrentStrategy
   LOW_HP_FACTOR = 0.35
   WAYPOINT_RADIUS = 100
-  KEEP_DISTANCE_TO_ENEMY = 0.7 # relative to cast range
-
-  MIN_ATTACK_DISTANCE = 0.5 # relative to cast range
-  MAX_ATTACK_DISTANCE = 5 # relative to cast range
 
   # NOTE: could be decreased
   MAGIC_MISSLE_DELAY = 60
@@ -311,5 +307,27 @@ class MyStrategy
 
   def random_bool
     @random.rand > 0.5
+  end
+end
+
+class NewStrategy < CurrentStrategy
+  LOW_HP_FACTOR = 0.15
+end
+
+class MyStrategy
+  def initialize(strategy_name='current')
+    if strategy_name == 'current'
+      @strategy = CurrentStrategy.new
+    else
+      @strategy = NewStrategy.new
+    end
+  end
+
+  # @param [Wizard] me
+  # @param [World] world
+  # @param [Game] game
+  # @param [Move] move
+  def move(me, world, game, move)
+    @strategy.move me, world, game, move
   end
 end

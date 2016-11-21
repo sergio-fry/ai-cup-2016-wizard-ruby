@@ -3,7 +3,7 @@ require './remote_process_client'
 
 class Runner
   def initialize
-    if ARGV.length == 3
+    if ARGV.length >= 3
       @remote_process_client = RemoteProcessClient::new(ARGV[0], ARGV[1].to_i)
       @token = ARGV[2]
     else
@@ -20,7 +20,7 @@ class Runner
       game = @remote_process_client.read_game_context_message
 
       strategies = Array.new(team_size) do
-        MyStrategy::new
+        MyStrategy::new ARGV[3]
       end
 
       until (player_context = @remote_process_client.read_player_context_message).nil?

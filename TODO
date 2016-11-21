@@ -1,8 +1,11 @@
 == TODO
 
+* take bonus
 * close fight
-* learn skills (missles)
 * step back before reloaded
+* detect stuck state
+* keep distance from all units (including friends)
+* learn skills (missles)
+* use skills
 * switch strategies when asked
 * learn asked skills
-* use skills
