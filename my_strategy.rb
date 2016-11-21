@@ -4,7 +4,7 @@ require './model/move'
 require './model/world'
 
 class MyStrategy
-  LOW_HP_FACTOR = 0.25
+  LOW_HP_FACTOR = 0.35
   WAYPOINT_RADIUS = 100
 
   def initialize
@@ -19,17 +19,16 @@ class MyStrategy
     initialize_strategy(me, game)
     initialize_tick(me, world, game, move)
 
-
     go_to next_waypoint
 
-    attack nearest_target
+    attack nearest_enemy
 
     # Постоянно двигаемся из-стороны в сторону, чтобы по нам было сложнее попасть.
     # Считаете, что сможете придумать более эффективный алгоритм уклонения? Попробуйте! ;)
     # move.strafe_speed = (random_bool ? 1 : -1) * game.wizard_strafe_speed
 
     # Если осталось мало жизненной энергии, отступаем к предыдущей ключевой точке на линии.
-    # back_to previous_waypoint if me.life < me.max_life * LOW_HP_FACTOR
+    back_to previous_waypoint if me.life < me.max_life * LOW_HP_FACTOR
   end
 
   private
@@ -49,6 +48,8 @@ class MyStrategy
       @move.action = ActionType::MAGIC_MISSILE
       @move.cast_angle = angle_to unit
       @move.min_cast_distance = distance_to(unit) - unit.radius + @game.magic_missile_radius
+      stop
+    else
       back_from unit
     end
   end
@@ -59,19 +60,16 @@ class MyStrategy
     p1.distance_to(@me)
   end
 
-  def nearest_target
-    targets = []
-    targets.concat @world.buildings
-    targets.concat @world.wizards
-    targets.concat @world.minions
-
-    targets = targets.reject do |target|
-      target.faction == Faction::NEUTRAL || target.faction == @me.faction
-    end.sort do |target|
-      distance_to(target)
+  def enemies
+    (@world.buildings + @world.wizards + @world.minions).flatten.reject do |unit|
+      unit.faction == Faction::NEUTRAL || unit.faction == @me.faction
     end
+  end
 
-    targets.first
+  def nearest_enemy
+    enemies.sort do |target|
+      distance_to(target)
+    end.first
   end
 
   def next_waypoint
@@ -127,12 +125,16 @@ class MyStrategy
     angle_to(point).abs < @game.staff_sector / 4
   end
 
+  def mirror_point_of(point)
+    Point2D.new(@me.x + (@me.x - point.x), @me.y + (@me.y - point.y))
+  end
+
   def turn_from(point)
-    @move.turn = -angle_to(point)
+    turn_to mirror_point_of(point)
   end
 
   def turned_from?(point)
-    true
+    angle_to(mirror_point_of(point)).abs < @game.staff_sector / 4
   end
 
   def go_to(point, speed: nil)
@@ -146,7 +148,9 @@ class MyStrategy
   def back_to(point)
     turn_from point
 
-    @move.speed = -@game.wizard_backward_speed
+    if turned_from?(point)
+      @move.speed = -@game.wizard_backward_speed
+    end
   end
 
   def back_from(point, speed: nil)
