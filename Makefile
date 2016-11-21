@@ -1,0 +1,2 @@
+run:
+	ruby runner.rb

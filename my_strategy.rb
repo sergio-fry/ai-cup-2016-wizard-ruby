@@ -6,9 +6,12 @@ require './model/world'
 class MyStrategy
   LOW_HP_FACTOR = 0.35
   WAYPOINT_RADIUS = 100
+  KEEP_DISTANCE_TO_ENEMY = 0.6 # relative to cast range
 
   def initialize
     @waypoints_by_lane = {}
+    @strafe_direction_counter = 0
+    @strafe_direction = 1
   end
 
   # @param [Wizard] me
@@ -19,13 +22,18 @@ class MyStrategy
     initialize_strategy(me, game)
     initialize_tick(me, world, game, move)
 
-    go_to next_waypoint
+    move.strafe_speed = strafe_direction * game.wizard_strafe_speed
 
-    attack nearest_enemy
-
-    # Постоянно двигаемся из-стороны в сторону, чтобы по нам было сложнее попасть.
-    # Считаете, что сможете придумать более эффективный алгоритм уклонения? Попробуйте! ;)
-    # move.strafe_speed = (random_bool ? 1 : -1) * game.wizard_strafe_speed
+    if need_to_retreat?
+      back_to previous_waypoint 
+      
+      # TODO: retreat with strafe
+      # move.strafe_speed = (random_bool ? 1 : -1) * game.wizard_strafe_speed
+    else
+      # TODO: do not go to far without friends
+      go_to next_waypoint
+      attack nearest_enemy
+    end
 
     # Если осталось мало жизненной энергии, отступаем к предыдущей ключевой точке на линии.
     back_to previous_waypoint if me.life < me.max_life * LOW_HP_FACTOR
@@ -33,24 +41,39 @@ class MyStrategy
 
   private
 
-  def stop
-    @move.speed = 0
-    @move.strafe_speed = 0
+  def strafe_direction
+    @strafe_direction_counter += 1
+
+    if @strafe_direction_counter > 50
+      @strafe_direction *= -1
+      @strafe_direction_counter = 0
+    end
+
+    @strafe_direction
   end
 
+  def need_to_retreat?
+    return false if previous_waypoint.nil?
+
+    enemies.any? do |unit|
+      distance_to(unit) < @me.cast_range * KEEP_DISTANCE_TO_ENEMY
+    end
+  end
+
+
+  # FIXME: does not attck minions. Why???
   def attack(unit)
     return if unit.nil?
-    return if distance_to(unit) > @me.cast_range
+    return if distance_to(unit) > @me.cast_range * 1.2
 
     turn_to unit
+    @move.strafe_speed = 0
+    @move.speed = 0
 
     if angle_to(unit).abs < @game.staff_sector / 2
       @move.action = ActionType::MAGIC_MISSILE
       @move.cast_angle = angle_to unit
       @move.min_cast_distance = distance_to(unit) - unit.radius + @game.magic_missile_radius
-      stop
-    else
-      back_from unit
     end
   end
 
@@ -67,8 +90,8 @@ class MyStrategy
   end
 
   def nearest_enemy
-    enemies.sort do |target|
-      distance_to(target)
+    enemies.sort do |unit|
+      distance_to(unit)
     end.first
   end
 
