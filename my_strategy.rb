@@ -6,7 +6,10 @@ require './model/world'
 class MyStrategy
   LOW_HP_FACTOR = 0.35
   WAYPOINT_RADIUS = 100
-  KEEP_DISTANCE_TO_ENEMY = 0.6 # relative to cast range
+  KEEP_DISTANCE_TO_ENEMY = 0.7 # relative to cast range
+
+  MIN_ATTACK_DISTANCE = 0.5 # relative to cast range
+  MAX_ATTACK_DISTANCE = 2 # relative to cast range
 
   def initialize
     @waypoints_by_lane = {}
@@ -22,18 +25,9 @@ class MyStrategy
     initialize_strategy(me, game)
     initialize_tick(me, world, game, move)
 
-    move.strafe_speed = strafe_direction * game.wizard_strafe_speed
-
-    if need_to_retreat?
-      back_to previous_waypoint 
-      
-      # TODO: retreat with strafe
-      # move.strafe_speed = (random_bool ? 1 : -1) * game.wizard_strafe_speed
-    else
-      # TODO: do not go to far without friends
-      go_to next_waypoint
-      attack nearest_enemy
-    end
+    # TODO: do not go to far without friends
+    go_to next_waypoint
+    attack nearest_enemy
 
     # Если осталось мало жизненной энергии, отступаем к предыдущей ключевой точке на линии.
     back_to previous_waypoint if me.life < me.max_life * LOW_HP_FACTOR
@@ -52,23 +46,20 @@ class MyStrategy
     @strafe_direction
   end
 
-  def need_to_retreat?
-    return false if previous_waypoint.nil?
-
-    enemies.any? do |unit|
-      distance_to(unit) < @me.cast_range * KEEP_DISTANCE_TO_ENEMY
+  def keep_atacking_distance_to(unit)
+    if distance_to(unit) < MIN_ATTACK_DISTANCE * @me.cast_range
+      @move.speed = -@game.wizard_backward_speed
+    else
+      @move.speed = @game.wizard_forward_speed
     end
   end
-
 
   # FIXME: does not attck minions. Why???
   def attack(unit)
     return if unit.nil?
-    return if distance_to(unit) > @me.cast_range * 1.2
+    return if distance_to(unit) > @me.cast_range
 
-    turn_to unit
-    @move.strafe_speed = 0
-    @move.speed = 0
+    back_from unit
 
     if angle_to(unit).abs < @game.staff_sector / 2
       @move.action = ActionType::MAGIC_MISSILE
@@ -84,7 +75,12 @@ class MyStrategy
   end
 
   def enemies
-    (@world.buildings + @world.wizards + @world.minions).flatten.reject do |unit|
+    units = []
+    units.concat @world.buildings
+    units.concat @world.wizards
+    units.concat @world.minions
+
+    units.flatten.reject do |unit|
       unit.faction == Faction::NEUTRAL || unit.faction == @me.faction
     end
   end
