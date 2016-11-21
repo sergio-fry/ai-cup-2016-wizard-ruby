@@ -57,6 +57,7 @@ class MyStrategy
 
   def run_away
     back_to previous_waypoint
+    strafe!
   end
 
   def step_back_from(unit)
@@ -65,6 +66,12 @@ class MyStrategy
     else
       back_to previous_waypoint
     end
+
+    strafe!
+  end
+
+  def strafe!
+    @move.strafe_speed = strafe_direction * @game.wizard_strafe_speed
   end
 
   def attack(unit)
@@ -87,7 +94,7 @@ class MyStrategy
   def strafe_direction
     @strafe_direction_counter += 1
 
-    if @strafe_direction_counter > 50
+    if @strafe_direction_counter > @me.radius * 2.2
       @strafe_direction *= -1
       @strafe_direction_counter = 0
     end
