@@ -47,6 +47,8 @@ class MyStrategy
     go_to next_waypoint
     attack nearest_enemy
     run_away if hurts?
+
+    run_away unless has_friends_nearby?
   end
 
   private
@@ -127,15 +129,37 @@ class MyStrategy
     end
   end
 
+  def friends
+    units = []
+    units.concat @world.buildings
+    units.concat @world.wizards
+    units.concat @world.minions
+
+    units.flatten.find_all do |unit|
+      unit.faction == @me.faction
+    end
+  end
+
+  def has_friends_nearby?
+    friends.find_all do |unit|
+      distance_to(unit) < @me.cast_range * 2
+    end.any? do |unit|
+      last_waypoint.distance_to(unit) < last_waypoint.distance_to(@me)
+    end
+  end
+
   def nearest_enemy
     enemies.sort_by do |unit|
       distance_to(unit)
     end.first
   end
 
+  def last_waypoint
+    @waypoints.last
+  end
+
   def next_waypoint
     last_waypoint_index = @waypoints.size - 1
-    last_waypoint = @waypoints[last_waypoint_index]
 
     waypoint_index = 0
     while waypoint_index < last_waypoint_index
