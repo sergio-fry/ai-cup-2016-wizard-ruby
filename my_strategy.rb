@@ -3,13 +3,32 @@ require './model/game'
 require './model/move'
 require './model/world'
 
+class Point2D
+  attr_reader :x, :y
+
+  def initialize(x, y)
+    @x, @y = x, y
+  end
+
+  def distance_to(point)
+    Math::hypot(point.x - @x, point.y - @y)
+  end
+
+  def mirror
+    self.class.new -x, -y
+  end
+end
+
 class MyStrategy
   LOW_HP_FACTOR = 0.35
   WAYPOINT_RADIUS = 100
   KEEP_DISTANCE_TO_ENEMY = 0.7 # relative to cast range
 
   MIN_ATTACK_DISTANCE = 0.5 # relative to cast range
-  MAX_ATTACK_DISTANCE = 2 # relative to cast range
+  MAX_ATTACK_DISTANCE = 5 # relative to cast range
+
+  # NOTE: could be decreased
+  MAGIC_MISSLE_DELAY = 60
 
   def initialize
     @waypoints_by_lane = {}
@@ -25,15 +44,42 @@ class MyStrategy
     initialize_strategy(me, game)
     initialize_tick(me, world, game, move)
 
-    # TODO: do not go to far without friends
-    go_to next_waypoint
+    #go_to next_waypoint
     attack nearest_enemy
-
-    # Если осталось мало жизненной энергии, отступаем к предыдущей ключевой точке на линии.
-    back_to previous_waypoint if me.life < me.max_life * LOW_HP_FACTOR
+    #run_away if hurts?
   end
 
   private
+
+  def hurts?
+    @me.life < @me.max_life * LOW_HP_FACTOR
+  end
+
+  def run_away
+    go_to previous_waypoint
+  end
+
+  # FIXME: does not attck minions. Why???
+  def attack(unit)
+    return if unit.nil?
+    #return if distance_to(unit) > @me.cast_range
+
+    puts "ATTACK: #{unit}"
+
+    turn_to unit
+    @move.speed = 0
+    @move.strafe_speed = 0
+
+    return
+
+    back_from unit if distance_to(unit) > @me.cast_range * 0.5
+
+    if angle_to(unit).abs < @game.staff_sector / 2
+      @move.action = ActionType::MAGIC_MISSILE
+      @move.cast_angle = angle_to unit
+      @move.min_cast_distance = distance_to(unit) - unit.radius + @game.magic_missile_radius
+    end
+  end
 
   def strafe_direction
     @strafe_direction_counter += 1
@@ -47,24 +93,10 @@ class MyStrategy
   end
 
   def keep_atacking_distance_to(unit)
-    if distance_to(unit) < MIN_ATTACK_DISTANCE * @me.cast_range
+    if distance_to(unit) < @me.cast_range * 0.2
       @move.speed = -@game.wizard_backward_speed
     else
       @move.speed = @game.wizard_forward_speed
-    end
-  end
-
-  # FIXME: does not attck minions. Why???
-  def attack(unit)
-    return if unit.nil?
-    return if distance_to(unit) > @me.cast_range
-
-    back_from unit
-
-    if angle_to(unit).abs < @game.staff_sector / 2
-      @move.action = ActionType::MAGIC_MISSILE
-      @move.cast_angle = angle_to unit
-      @move.min_cast_distance = distance_to(unit) - unit.radius + @game.magic_missile_radius
     end
   end
 
@@ -83,6 +115,8 @@ class MyStrategy
     units.flatten.reject do |unit|
       unit.faction == Faction::NEUTRAL || unit.faction == @me.faction
     end
+
+    @world.trees
   end
 
   def nearest_enemy
@@ -245,21 +279,5 @@ class MyStrategy
 
   def random_bool
     @random.rand > 0.5
-  end
-
-  class Point2D
-    attr_reader :x, :y
-
-    def initialize(x, y)
-      @x, @y = x, y
-    end
-
-    def distance_to(point)
-      Math::hypot(point.x - @x, point.y - @y)
-    end
-
-    def mirror
-      self.class.new -x, -y
-    end
   end
 end

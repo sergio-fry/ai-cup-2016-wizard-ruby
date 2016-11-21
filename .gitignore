@@ -36,3 +36,5 @@ build/
 /wipe.bat
 /compile-rb.bat
 /.idea/dictionaries/*.xml
+
+tags
