@@ -33,15 +33,15 @@ Smart: #{smart_avg.round}
   end
 
   def current_avg
-    (player_score(0) + player_score(2)) / 2.0
+    (player_score(7) + player_score(8)) / 2.0
   end
 
   def new_avg
-    (player_score(5) + player_score(7)) / 2.0
+    (player_score(0) + player_score(2)) / 2.0
   end
 
   def smart_avg
-    (player_score(1) + player_score(3) + player_score(4) + player_score(6) + player_score(8) + player_score(9)) / 6.0
+    (player_score(1) + player_score(3) + player_score(4) + player_score(5) + player_score(6) + player_score(9)) / 6.0
   end
 
   def player_score(n)
