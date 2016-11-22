@@ -49,7 +49,7 @@ Smart: #{smart_avg.round}
   end
 end
 
-data = File.read './local-runner-ru/result.txt'
+data = File.read 'result.txt'
 res = GameResults.new data
 
 puts res.pretty
