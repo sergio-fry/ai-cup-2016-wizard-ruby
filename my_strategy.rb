@@ -40,10 +40,16 @@ class CurrentStrategy
     attack nearest_enemy
 
     run_away if hurts?
-    run_away unless has_friends_nearby?
+    run_away unless has_friend_closer_to_enemy? unless nearest_enemy.nil?
   end
 
   private
+
+  def has_friend_closer_to_enemy?
+    friends.any? do |unit|
+      nearest_enemy.get_distance_to_unit(unit) < distance_to(nearest_enemy)
+    end
+  end
 
   def hurts?
     @me.life < @me.max_life * LOW_HP_FACTOR
@@ -75,8 +81,6 @@ class CurrentStrategy
     turn_to unit
     @move.speed = 0
     @move.strafe_speed = 0
-
-    step_back_from unit if distance_to(unit) < @me.cast_range * 0.9
 
     if angle_to(unit).abs < @game.staff_sector / 2
       @move.action = ActionType::MAGIC_MISSILE
@@ -299,40 +303,6 @@ class CurrentStrategy
 end
 
 class NewStrategy < CurrentStrategy
-
-  def move(me, world, game, move)
-    initialize_strategy(me, game)
-    initialize_tick(me, world, game, move)
-
-    go_to next_waypoint
-    attack nearest_enemy
-
-    run_away if hurts?
-    run_away unless has_friend_closer_to_enemy? unless nearest_enemy.nil?
-  end
-
-  private
-
-  def has_friend_closer_to_enemy?
-    friends.any? do |unit|
-      nearest_enemy.get_distance_to_unit(unit) < distance_to(nearest_enemy)
-    end
-  end
-
-  def attack(unit)
-    return if unit.nil?
-    return if distance_to(unit) > @me.cast_range
-
-    turn_to unit
-    @move.speed = 0
-    @move.strafe_speed = 0
-
-    if angle_to(unit).abs < @game.staff_sector / 2
-      @move.action = ActionType::MAGIC_MISSILE
-      @move.cast_angle = angle_to unit
-      @move.min_cast_distance = distance_to(unit) - unit.radius + @game.magic_missile_radius
-    end
-  end
 end
 
 class MyStrategy

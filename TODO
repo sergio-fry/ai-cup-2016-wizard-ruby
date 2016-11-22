@@ -1,16 +1,32 @@
 == TODO
 
+=== Short List
 * stop running if already too far
-* smart select enemey to attack: kill attack wizard/building first, attack weakiest first
+* attack wizard/building first
+* close fight
+
+=== Poterntial field
+* go closer to building when it is almost destroyed
+* keep distance from all units (including friends)
+* be near friend wizard to earn more scores
 * friend should be between me and enemy
+
+=== Fight
+* attack weak first
+* attack most scorable first
+* go back with attack (using strafe)
 * attack wizard when realoding
 * attack minion when realoding
-* take bonus
-* close fight
-* step back before reloaded
+* step back until reloaded
+
+=== Movement
 * detect stuck state
-* keep distance from all units (including friends)
+* take bonus
+
+=== Tour 2
 * learn skills (missles)
 * use skills
+
+=== Tour 3
 * switch strategies when asked
 * learn asked skills
