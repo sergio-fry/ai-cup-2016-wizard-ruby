@@ -1,5 +1,9 @@
 == TODO
 
+* friend should be closer to nearest enemy
+* smart select enemey to attack: kill attack wizard/building first, attack weakiest first
+* attack wizard when realoding
+* attack minion when realoding
 * take bonus
 * close fight
 * step back before reloaded
