@@ -37,13 +37,17 @@ class CurrentStrategy
     initialize_tick(me, world, game, move)
 
     go_to next_waypoint
-    attack nearest_enemy
+    attack current_target
 
     run_away if hurts?
     run_away unless has_friend_closer_to_enemy? unless nearest_enemy.nil?
   end
 
   private
+
+  def current_target
+    nearest_enemy
+  end
 
   def has_friend_closer_to_enemy?
     friends.any? do |unit|
@@ -303,6 +307,24 @@ class CurrentStrategy
 end
 
 class NewStrategy < CurrentStrategy
+  def current_target
+    reachable_enemies.sort_by do |unit|
+      k = case unit
+          when Wizard, Building
+            1
+          else
+            3
+          end
+
+      k * (unit.life.to_f / unit.max_life)
+    end.first
+  end
+
+  def reachable_enemies
+    enemies.reject do |unit|
+      distance_to(unit) > @me.cast_range
+    end
+  end
 end
 
 class MyStrategy

@@ -1,8 +1,7 @@
 == TODO
 
 === Short List
-* stop running if already too far
-* attack wizard/building first
+* attack weak first
 * close fight
 
 === Poterntial field
@@ -12,7 +11,6 @@
 * friend should be between me and enemy
 
 === Fight
-* attack weak first
 * attack most scorable first
 * go back with attack (using strafe)
 * attack wizard when realoding
@@ -22,6 +20,7 @@
 === Movement
 * detect stuck state
 * take bonus
+* stop running if already too far
 
 === Tour 2
 * learn skills (missles)

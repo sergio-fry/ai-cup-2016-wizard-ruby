@@ -15,6 +15,13 @@ duel:
 	sleep 1
 	ruby runner.rb 127.0.0.1 31002 0000000000000000 current
 
+coop:
+	java -Xms512m -Xmx2G -server -jar "local-runner.jar" ./local-runner-modes/render-coop.properties &
+	sleep 1
+	ruby runner.rb 127.0.0.1 31001 0000000000000000 new &
+	sleep 1
+	ruby runner.rb 127.0.0.1 31002 0000000000000000 current
+
 battle:
 	java -Xms512m -Xmx2G -server -jar "local-runner.jar" ./local-runner-modes/render-battle.properties &
 	sleep 1
