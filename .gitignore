@@ -38,3 +38,6 @@ build/
 /.idea/dictionaries/*.xml
 
 tags
+
+game.log
+result.txt
