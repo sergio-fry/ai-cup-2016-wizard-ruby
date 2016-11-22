@@ -311,7 +311,15 @@ class CurrentStrategy
 end
 
 class NewStrategy < CurrentStrategy
-  LOW_HP_FACTOR = 0.15
+  LOW_HP_FACTOR = 0.9
+
+  def go_to(point, speed: nil)
+    turn_to point
+
+    if turned_to?(point)
+      @move.speed = (speed || 1)
+    end
+  end
 end
 
 class MyStrategy
