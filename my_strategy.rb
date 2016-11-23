@@ -23,8 +23,19 @@ class CurrentStrategy
   LOW_HP_FACTOR = 0.35
   WAYPOINT_RADIUS = 100
 
-  # NOTE: could be decreased
-  MAGIC_MISSLE_DELAY = 60
+  PATH_FINDER_SECTORS = 64
+
+  POTENTIALS = {
+    Building => -2,
+    Minion => -0.5,
+    Tree => -1,
+    Wizard => -0.5,
+    edge: -0.3,
+    corner: -1,
+    target: 10,
+    default: -1,
+    magic_fix: -3,
+  }
 
   def initialize
     @waypoints_by_lane = {}
@@ -43,6 +54,46 @@ class CurrentStrategy
   end
 
   private
+
+  def point
+    Point2D.new @me.x, @me.y
+  end
+
+  def potential_field_value_for place, point
+    objects = (@world.buildings + @world.trees + @world.minions + @world.wizards).reject do |unit|
+      me?(unit) || distance_to(unit) > @me.cast_range
+    end.map do |unit|
+      (POTENTIALS[unit.class] || POTENTIALS[:default]) / (place.distance_to(unit) - unit.radius - @me.radius) ** 2
+    end.inject(&:+).to_f
+
+    edges = 0
+    edges += POTENTIALS[:edge] / (place.x.to_f - @me.radius) ** 2
+    edges += POTENTIALS[:edge] / (place.y.to_f - @me.radius) ** 2
+    edges += POTENTIALS[:edge] / (map_size - place.x + @me.radius).to_f ** 2
+    edges += POTENTIALS[:edge] / (map_size - place.y + @me.radius).to_f ** 2
+
+    corners = 0
+    corners += POTENTIALS[:corner] / place.distance_to(Point2D.new(0, 0))
+    corners += POTENTIALS[:corner] / place.distance_to(Point2D.new(map_size, 0))
+    corners += POTENTIALS[:corner] / place.distance_to(Point2D.new(0, map_size))
+    corners += POTENTIALS[:corner] / place.distance_to(Point2D.new(map_size, map_size))
+
+    magic_fix = 0
+    magic_fix += POTENTIALS[:magic_fix] / place.distance_to(Point2D.new(1000, 1000))
+    magic_fix += POTENTIALS[:magic_fix] / place.distance_to(Point2D.new(3000, 3000))
+
+    target = POTENTIALS[:target] / place.distance_to(point)
+
+    objects + edges + corners + target + magic_fix
+  end
+
+  def me?(unit)
+    distance_to(unit) < @me.radius
+  end
+
+  def home
+    Point2D.new(400, @game.map_size - 400)
+  end
 
   def keep_safe_distance
     run_away if hurts?
@@ -79,8 +130,21 @@ class CurrentStrategy
   end
 
   def run_away
-    return if previous_waypoint.nil?
-    dummy_go_to_with_turn previous_waypoint, current_target
+    places = nearest_places.sort_by do |place|
+      potential_field_value_for(place, point)
+    end
+
+    # go to place with max potential value
+    dummy_go_to_with_turn home, current_target
+  end
+
+  def nearest_places
+    (0..Math::PI * 2).step(Math::PI / PATH_FINDER_SECTORS).map do |angle|
+      x1 = Math::cos(angle) * @me.radius + @me.x
+      y1 = Math::sin(angle) * @me.radius + @me.y
+
+      Point2D.new x1, y1
+    end
   end
 
   def step_back_from(unit)
@@ -234,7 +298,14 @@ class CurrentStrategy
   end
 
   def go_to(point)
-    dummy_go_to_with_turn point, current_target
+    return if point.nil?
+
+    places = nearest_places.sort_by do |place|
+      potential_field_value_for(place, point)
+    end
+
+    # go to place with max potential value
+    dummy_go_to_with_turn places.last, current_target
   end
 
   def back_to(point)
@@ -264,159 +335,6 @@ class CurrentStrategy
   end
 
   def initialize_strategy
-    if @random == nil
-      @random = Random.new(@game.random_seed)
-
-      map_size = @game.map_size
-
-      @waypoints_by_lane[LaneType::MIDDLE] = [
-        Point2D.new(100, map_size - 100),
-        random_bool ? Point2D.new(600, map_size - 200) : Point2D.new(200, map_size - 600),
-        Point2D.new(800, map_size - 800),
-        Point2D.new(map_size - 600, 600),
-      ]
-
-      @waypoints_by_lane[LaneType::TOP] = [
-        Point2D.new(100, map_size - 100),
-        Point2D.new(100, map_size - 400),
-        Point2D.new(200, map_size - 800),
-        Point2D.new(200, map_size * 0.75),
-        Point2D.new(200, map_size * 0.5),
-        Point2D.new(200, map_size * 0.25),
-        Point2D.new(200, 200),
-        Point2D.new(map_size * 0.25, 200),
-        Point2D.new(map_size * 0.5, 200),
-        Point2D.new(map_size * 0.75, 200),
-        Point2D.new(map_size - 200, 200),
-      ]
-
-      @waypoints_by_lane[LaneType::BOTTOM] = [
-        Point2D.new(100, map_size - 100),
-        Point2D.new(400, map_size - 100),
-        Point2D.new(800, map_size - 200),
-        Point2D.new(map_size * 0.25, map_size - 200),
-        Point2D.new(map_size * 0.5, map_size - 200),
-        Point2D.new(map_size * 0.75, map_size - 200),
-        Point2D.new(map_size - 200, map_size - 200),
-        Point2D.new(map_size - 200, map_size * 0.75),
-        Point2D.new(map_size - 200, map_size * 0.5),
-        Point2D.new(map_size - 200, map_size * 0.25),
-        Point2D.new(map_size - 200, 200),
-      ]
-
-      case @me.owner_player_id
-      when 1, 2, 6, 7
-        @lane = LaneType::TOP
-      when 3, 8
-        @lane = LaneType::MIDDLE
-      when 4, 5, 9, 10
-        @lane = LaneType::BOTTOM
-      end
-
-      @waypoints = @waypoints_by_lane[@lane]
-    end
-  end
-
-  def random_bool
-    @random.rand > 0.5
-  end
-
-  def dummy_go_to_with_turn(point, target)
-    turn_to target if target
-
-    @move.strafe_speed = 3 * Math::sin(@me.angle_to_unit(point))
-    @move.speed = 3 * Math::cos(@me.angle_to_unit(point))
-  end
-end
-
-class NewStrategy < CurrentStrategy
-  def go_to(point)
-    return if point.nil?
-    places = nearest_places.sort_by do |place|
-      potential_field_value_for(place, point)
-    end
-
-    # go to place with max potential value
-    dummy_go_to_with_turn places.last, current_target
-  end
-
-  def home
-    Point2D.new(400, @game.map_size - 400)
-  end
-
-  def run_away
-    places = nearest_places.sort_by do |place|
-      potential_field_value_for(place, point)
-    end
-
-    # go to place with max potential value
-    dummy_go_to_with_turn home, current_target
-  end
-
-  def nearest_places
-    (0..Math::PI * 2).step(Math::PI / PATH_FINDER_SECTORS).map do |angle|
-      x1 = Math::cos(angle) * @me.radius + @me.x
-      y1 = Math::sin(angle) * @me.radius + @me.y
-
-      Point2D.new x1, y1
-    end
-  end
-
-  PATH_FINDER_SECTORS = 64
-
-  POTENTIALS = {
-    Building => -2,
-    Minion => -1,
-    Tree => -2,
-    Wizard => -1,
-    edge: -0.5,
-    corner: -1,
-    target: 10,
-    default: -1
-  }
-
-  def me?(unit)
-    distance_to(unit) < @me.radius
-  end
-
-  def potential_field_value_for place, point
-    objects = (@world.buildings + @world.trees + @world.minions + @world.wizards).reject do |unit|
-      me?(unit) || distance_to(unit) > @me.cast_range
-    end.map do |unit|
-      (POTENTIALS[unit.class] || POTENTIALS[:default]) / (place.distance_to(unit) - unit.radius - @me.radius) ** 2
-    end.inject(&:+).to_f
-
-    edges = 0
-    edges += POTENTIALS[:edge] / place.x.to_f ** 2
-    edges += POTENTIALS[:edge] / place.y.to_f ** 2
-    edges += POTENTIALS[:edge] / (map_size - place.x).to_f ** 2
-    edges += POTENTIALS[:edge] / (map_size - place.y).to_f ** 2
-
-    corners = 0
-    corners += POTENTIALS[:corner] / place.distance_to(Point2D.new(0, 0))
-    corners += POTENTIALS[:corner] / place.distance_to(Point2D.new(map_size, 0))
-    corners += POTENTIALS[:corner] / place.distance_to(Point2D.new(0, map_size))
-    corners += POTENTIALS[:corner] / place.distance_to(Point2D.new(map_size, map_size))
-
-    target = POTENTIALS[:target] / place.distance_to(point)
-
-    objects + edges + corners + target
-  end
-
-
-  def point
-    Point2D.new @me.x, @me.y
-  end
-
-  def dummy_go_to(point)
-    turn_to point
-
-    if turned_to?(point)
-      @move.speed = @game.wizard_forward_speed
-    end
-  end
-
-  def initialize_strategy
     case @me.owner_player_id
     when 1, 2, 6, 7
       @waypoints = waypoints_top
@@ -425,6 +343,13 @@ class NewStrategy < CurrentStrategy
     when 4, 5, 9, 10
       @waypoints = waypoints_bottom
     end
+  end
+
+  def dummy_go_to_with_turn(point, target)
+    turn_to target if target
+
+    @move.strafe_speed = 3 * Math::sin(@me.angle_to_unit(point))
+    @move.speed = 3 * Math::cos(@me.angle_to_unit(point))
   end
 
   def map_size
@@ -442,15 +367,9 @@ class NewStrategy < CurrentStrategy
 
   def waypoints_bottom
     [
-      Point2D.new(100, map_size - 50),
-      Point2D.new(400, map_size - 100),
-      Point2D.new(800, map_size - 200),
-      Point2D.new(map_size * 0.25, map_size - 200),
-      Point2D.new(map_size * 0.5, map_size - 200),
+      Point2D.new(100, map_size - 100),
       Point2D.new(map_size * 0.75, map_size - 200),
-      Point2D.new(map_size - 200, map_size - 200),
-      Point2D.new(map_size - 200, map_size * 0.75),
-      Point2D.new(map_size - 200, map_size * 0.5),
+      Point2D.new(map_size - 400, map_size - 400),
       Point2D.new(map_size - 200, map_size * 0.25),
       Point2D.new(map_size - 200, 200),
     ]
@@ -460,15 +379,15 @@ class NewStrategy < CurrentStrategy
     [
       Point2D.new(100, map_size - 100),
       Point2D.new(200, map_size * 0.25),
-      Point2D.new(150, 300),
-      Point2D.new(300, 300),
-      Point2D.new(300, 150),
-      Point2D.new(map_size * 0.25, 200),
+      Point2D.new(400, 400),
+      Point2D.new(map_size * 0.75, 200),
       Point2D.new(map_size - 200, 200),
     ]
   end
 end
 
+class NewStrategy < CurrentStrategy
+end
 
 class MyStrategy
   def initialize(strategy_name='current')

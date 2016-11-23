@@ -11,7 +11,7 @@ describe NewStrategy do
       me = OpenStruct.new(x: 1000, y: 1000, radius: 50)
       strategy.instance_variable_set(:@me, me)
 
-      strategy.nearest_places.each do |place|
+      strategy.send(:nearest_places).each do |place|
         expect(place.distance_to(me)).to be_within(epsilon).of(50)
       end
     end

@@ -2,32 +2,28 @@
 
 === Short List
 * stop running if already too far
-* fix waypoints
-
-* wait with shooting to make last shot
-* potential field of enemies when low HP should be increased
-
-=== Poterntial field
-* go closer to building when it is almost destroyed
-* keep distance from all units (including friends)
-* be near friend wizard to earn more scores
-* friend should be between me and enemy
 
 === BONUS
 * take bonus
 
 === Fight
+* finish wizard with low HP
+* be near friend wizard to earn more scores
+* wait with shooting to make last shot
 * attack most scorable first
 * attack wizard when realoding
 * attack minion when realoding
 * step back until reloaded
 * keep far from enemies with gun
 * close fight
+* friend should be between me and enemy
 
 === Movement
+* potential field of enemies when low HP should be increased
 * destroy tree if stucked
 * detect stuck state
 * wait for firiends with health
+* select strategy randomly/smart
 
 === Tour 2
 * learn skills (missles)
