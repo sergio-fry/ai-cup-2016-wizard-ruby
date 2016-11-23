@@ -39,14 +39,33 @@ class CurrentStrategy
     go_to next_waypoint
     attack current_target
 
-    run_away if hurts?
-    run_away unless has_friend_closer_to_enemy? unless nearest_enemy.nil?
+    keep_safe_distance
   end
 
   private
 
+  def keep_safe_distance
+    run_away if hurts?
+    run_away unless has_friend_closer_to_enemy? unless nearest_enemy.nil?
+  end
+
   def current_target
-    nearest_enemy
+    reachable_enemies.sort_by do |unit|
+      k = case unit
+          when Wizard, Building
+            1
+          else
+            3
+          end
+
+      k * (unit.life.to_f / unit.max_life)
+    end.first
+  end
+
+  def reachable_enemies
+    enemies.reject do |unit|
+      distance_to(unit) > @me.cast_range
+    end
   end
 
   def has_friend_closer_to_enemy?
@@ -214,11 +233,11 @@ class CurrentStrategy
     angle_to(mirror_point_of(point)).abs < @game.staff_sector / 4
   end
 
-  def go_to(point, speed: nil)
+  def go_to(point)
     turn_to point
 
     if turned_to?(point)
-      @move.speed = (speed || @game.wizard_forward_speed)
+      @move.speed = @game.wizard_forward_speed
     end
   end
 
@@ -307,25 +326,62 @@ class CurrentStrategy
 end
 
 class NewStrategy < CurrentStrategy
-  def current_target
-    reachable_enemies.sort_by do |unit|
-      k = case unit
-          when Wizard, Building
-            1
-          else
-            3
-          end
+  def go_to(point)
+    places = nearest_places.sort_by do |place|
+      potential_field_value_for(place)
+    end
 
-      k * (unit.life.to_f / unit.max_life)
-    end.first
+    # go to place with max potential value
+    dummy_go_to places.last
   end
 
-  def reachable_enemies
-    enemies.reject do |unit|
-      distance_to(unit) > @me.cast_range
+  def nearest_places
+    (0..Math::PI * 2).step(Math::PI / 8).map do |angle|
+      x1 = Math::cos(angle) * @me.radius + @me.x
+      y1 = Math::sin(angle) * @me.radius + @me.y
+
+      Point2D.new x1, y1
+    end
+  end
+
+  BUILDING_POTENTIAL = -1
+  EDGE_POTENTIAL = -0.5
+  CORNER_POTENTIAL = -2
+
+  def potential_field_value_for place
+    buildings = @world.buildings.map do |unit|
+      BUILDING_POTENTIAL / place.distance_to(unit) ** 2
+    end.inject(&:+)
+
+    edges = 0
+    edges += EDGE_POTENTIAL / place.x.to_f ** 2
+    edges += EDGE_POTENTIAL / place.y.to_f ** 2
+    edges += EDGE_POTENTIAL / (@game.map_size - place.x).to_f ** 2
+    edges += EDGE_POTENTIAL / (@game.map_size - place.y).to_f ** 2
+
+    corners = 0
+    corners += CORNER_POTENTIAL / place.distance_to(Point2D.new(0, 0)) ** 2
+    corners += CORNER_POTENTIAL / place.distance_to(Point2D.new(@game.map_size, 0)) ** 2
+    corners += CORNER_POTENTIAL / place.distance_to(Point2D.new(0, @game.map_size)) ** 2
+    corners += CORNER_POTENTIAL / place.distance_to(Point2D.new(@game.map_size, @game.map_size)) ** 2
+
+    buildings + edges + corners
+  end
+
+
+  def point
+    Point2D.new @me.x, @me.y
+  end
+
+  def dummy_go_to(point)
+    turn_to point
+
+    if turned_to?(point)
+      @move.speed = @game.wizard_forward_speed
     end
   end
 end
+
 
 class MyStrategy
   def initialize(strategy_name='current')

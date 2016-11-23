@@ -1,8 +1,6 @@
 == TODO
 
 === Short List
-* attack weak first
-* close fight
 
 === Poterntial field
 * go closer to building when it is almost destroyed
@@ -10,16 +8,23 @@
 * be near friend wizard to earn more scores
 * friend should be between me and enemy
 
+=== BONUS
+* take bonus
+
 === Fight
 * attack most scorable first
 * go back with attack (using strafe)
 * attack wizard when realoding
 * attack minion when realoding
 * step back until reloaded
+* keep far from enemies with gun
+* close fight
 
 === Movement
+* destroy tree if stucked
+* go_to with keeping eyes on something else (enemy)
 * detect stuck state
-* take bonus
+* wait for firiends with health
 * stop running if already too far
 
 === Tour 2
