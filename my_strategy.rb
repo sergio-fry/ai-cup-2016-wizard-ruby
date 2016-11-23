@@ -336,13 +336,15 @@ class NewStrategy < CurrentStrategy
   end
 
   def nearest_places
-    (0..Math::PI * 2).step(Math::PI / 32).map do |angle|
+    (0..Math::PI * 2).step(Math::PI / PATH_FINDER_SECTORS).map do |angle|
       x1 = Math::cos(angle) * @me.radius + @me.x
       y1 = Math::sin(angle) * @me.radius + @me.y
 
       Point2D.new x1, y1
     end
   end
+
+  PATH_FINDER_SECTORS = 64
 
   BUILDING_POTENTIAL = -1
   TREE_POTENTIAL = -0.5
@@ -351,12 +353,17 @@ class NewStrategy < CurrentStrategy
   TARGET_POTENTIAL = 100
 
   def potential_field_value_for place, point
-    buildings = @world.buildings.map do |unit|
-      BUILDING_POTENTIAL / place.distance_to(unit) ** 2
-    end.inject(&:+).to_f
+    objects = (@world.buildings + @world.trees + @world.minions + @world.wizards).reject do |unit|
+      distance_to(unit) > @me.cast_range
+    end.map do |unit|
+      v = case unit
+          when Building
+            BUILDING_POTENTIAL / place.distance_to(unit) ** 2
+          else
+            TREE_POTENTIAL / place.distance_to(unit) ** 2
+          end
 
-    trees = @world.trees.reject { |unit| distance_to(unit) > @me.cast_range }.map do |unit|
-      TREE_POTENTIAL / place.distance_to(unit) ** 2
+      v
     end.inject(&:+).to_f
 
     edges = 0
@@ -373,7 +380,7 @@ class NewStrategy < CurrentStrategy
 
     target = TARGET_POTENTIAL / place.distance_to(point) ** 2
 
-    buildings + edges + corners + trees + target
+    objects + edges + corners + target
   end
 
 
