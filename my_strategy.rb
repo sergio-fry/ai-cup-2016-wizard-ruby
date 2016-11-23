@@ -33,8 +33,8 @@ class CurrentStrategy
   end
 
   def move(me, world, game, move)
-    initialize_strategy(me, game)
     initialize_tick(me, world, game, move)
+    initialize_strategy
 
     go_to next_waypoint
     attack current_target
@@ -79,8 +79,8 @@ class CurrentStrategy
   end
 
   def run_away
-    back_to previous_waypoint
-    strafe!
+    return if previous_waypoint.nil?
+    dummy_go_to_with_turn previous_waypoint, current_target
   end
 
   def step_back_from(unit)
@@ -234,11 +234,7 @@ class CurrentStrategy
   end
 
   def go_to(point)
-    turn_to point
-
-    if turned_to?(point)
-      @move.speed = @game.wizard_forward_speed
-    end
+    dummy_go_to_with_turn point, current_target
   end
 
   def back_to(point)
@@ -258,6 +254,7 @@ class CurrentStrategy
   end
 
   def initialize_tick(me, world, game, move)
+    @rndom = Random.new(game.random_seed)
     @me = me
     @world = world
     @game = game
@@ -266,11 +263,11 @@ class CurrentStrategy
     @move.action = ActionType::NONE
   end
 
-  def initialize_strategy(me, game)
+  def initialize_strategy
     if @random == nil
-      @random = Random.new(game.random_seed)
+      @random = Random.new(@game.random_seed)
 
-      map_size = game.map_size
+      map_size = @game.map_size
 
       @waypoints_by_lane[LaneType::MIDDLE] = [
         Point2D.new(100, map_size - 100),
@@ -307,7 +304,7 @@ class CurrentStrategy
         Point2D.new(map_size - 200, 200),
       ]
 
-      case me.owner_player_id
+      case @me.owner_player_id
       when 1, 2, 6, 7
         @lane = LaneType::TOP
       when 3, 8
@@ -323,6 +320,13 @@ class CurrentStrategy
   def random_bool
     @random.rand > 0.5
   end
+
+  def dummy_go_to_with_turn(point, target)
+    turn_to target if target
+
+    @move.strafe_speed = 3 * Math::sin(@me.angle_to_unit(point))
+    @move.speed = 3 * Math::cos(@me.angle_to_unit(point))
+  end
 end
 
 class NewStrategy < CurrentStrategy
@@ -332,7 +336,20 @@ class NewStrategy < CurrentStrategy
     end
 
     # go to place with max potential value
-    dummy_go_to places.last
+    dummy_go_to_with_turn places.last, current_target
+  end
+
+  def home
+    Point2D.new(400, @game.map_size - 400)
+  end
+
+  def run_away
+    places = nearest_places.sort_by do |place|
+      potential_field_value_for(place, point)
+    end
+
+    # go to place with max potential value
+    dummy_go_to_with_turn home, current_target
   end
 
   def nearest_places
@@ -346,8 +363,8 @@ class NewStrategy < CurrentStrategy
 
   PATH_FINDER_SECTORS = 64
 
-  BUILDING_POTENTIAL = -1
-  TREE_POTENTIAL = -0.5
+  BUILDING_POTENTIAL = -0.2
+  DEFAULT_POTENTIAL = -0.2
   EDGE_POTENTIAL = -0.5
   CORNER_POTENTIAL = -2
   TARGET_POTENTIAL = 100
@@ -358,27 +375,27 @@ class NewStrategy < CurrentStrategy
     end.map do |unit|
       v = case unit
           when Building
-            BUILDING_POTENTIAL / place.distance_to(unit) ** 2
+            BUILDING_POTENTIAL / (place.distance_to(unit) - unit.radius) ** 4
           else
-            TREE_POTENTIAL / place.distance_to(unit) ** 2
+            DEFAULT_POTENTIAL / (place.distance_to(unit) - unit.radius) ** 4
           end
 
       v
     end.inject(&:+).to_f
 
     edges = 0
-    edges += EDGE_POTENTIAL / place.x.to_f ** 2
-    edges += EDGE_POTENTIAL / place.y.to_f ** 2
-    edges += EDGE_POTENTIAL / (@game.map_size - place.x).to_f ** 2
-    edges += EDGE_POTENTIAL / (@game.map_size - place.y).to_f ** 2
+    edges += EDGE_POTENTIAL / place.x.to_f
+    edges += EDGE_POTENTIAL / place.y.to_f
+    edges += EDGE_POTENTIAL / (@game.map_size - place.x).to_f
+    edges += EDGE_POTENTIAL / (@game.map_size - place.y).to_f
 
     corners = 0
-    corners += CORNER_POTENTIAL / place.distance_to(Point2D.new(0, 0)) ** 2
-    corners += CORNER_POTENTIAL / place.distance_to(Point2D.new(@game.map_size, 0)) ** 2
-    corners += CORNER_POTENTIAL / place.distance_to(Point2D.new(0, @game.map_size)) ** 2
-    corners += CORNER_POTENTIAL / place.distance_to(Point2D.new(@game.map_size, @game.map_size)) ** 2
+    corners += CORNER_POTENTIAL / place.distance_to(Point2D.new(0, 0))
+    corners += CORNER_POTENTIAL / place.distance_to(Point2D.new(@game.map_size, 0))
+    corners += CORNER_POTENTIAL / place.distance_to(Point2D.new(0, @game.map_size))
+    corners += CORNER_POTENTIAL / place.distance_to(Point2D.new(@game.map_size, @game.map_size))
 
-    target = TARGET_POTENTIAL / place.distance_to(point) ** 2
+    target = TARGET_POTENTIAL / place.distance_to(point)
 
     objects + edges + corners + target
   end
@@ -394,6 +411,68 @@ class NewStrategy < CurrentStrategy
     if turned_to?(point)
       @move.speed = @game.wizard_forward_speed
     end
+  end
+
+  def initialize_strategy
+    case @me.owner_player_id
+    when 1, 2, 6, 7
+      @waypoints = waypoints_top
+    when 3, 8
+      @waypoints = waypoints_middle
+    when 4, 5, 9, 10
+      @waypoints = waypoints_bottom
+    end
+  end
+
+  def map_size
+    @game.map_size
+  end
+
+  def waypoints_middle
+    [
+      Point2D.new(100, map_size - 100),
+      random_bool ? Point2D.new(600, map_size - 200) : Point2D.new(200, map_size - 600),
+      Point2D.new(800, map_size - 800),
+      Point2D.new(map_size - 600, 600),
+    ]
+  end
+
+  def waypoints_bottom
+    [
+      Point2D.new(100, map_size - 100),
+      Point2D.new(400, map_size - 100),
+      Point2D.new(800, map_size - 200),
+      Point2D.new(map_size * 0.25, map_size - 200),
+      Point2D.new(map_size * 0.5, map_size - 200),
+      Point2D.new(map_size * 0.75, map_size - 200),
+      Point2D.new(map_size - 200, map_size - 200),
+      Point2D.new(map_size - 200, map_size * 0.75),
+      Point2D.new(map_size - 200, map_size * 0.5),
+      Point2D.new(map_size - 200, map_size * 0.25),
+      Point2D.new(map_size - 200, 200),
+    ]
+  end
+
+  def waypoints_top
+    [
+      #Point2D.new(100, map_size - 100),
+      #Point2D.new(100, map_size - 400),
+      #Point2D.new(200, map_size - 800),
+      #Point2D.new(200, map_size * 0.75),
+      #Point2D.new(200, map_size * 0.5),
+      #Point2D.new(200, map_size * 0.25),
+      #Point2D.new(200, 200),
+      #Point2D.new(map_size * 0.25, 200),
+      #Point2D.new(map_size * 0.5, 200),
+      #Point2D.new(map_size * 0.75, 200),
+      #Point2D.new(map_size - 200, 200),
+    ]
+
+    [
+      Point2D.new(200, 3800),
+      Point2D.new(2000, 2000),
+      Point2D.new(map_size - 200, 200),
+    ]
   end
 end
 
