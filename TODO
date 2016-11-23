@@ -13,7 +13,6 @@
 
 === Fight
 * attack most scorable first
-* go back with attack (using strafe)
 * attack wizard when realoding
 * attack minion when realoding
 * step back until reloaded
@@ -22,7 +21,6 @@
 
 === Movement
 * destroy tree if stucked
-* go_to with keeping eyes on something else (enemy)
 * detect stuck state
 * wait for firiends with health
 * stop running if already too far
