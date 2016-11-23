@@ -52,7 +52,7 @@ class CurrentStrategy
   LOW_HP_FACTOR = 0.35
   WAYPOINT_RADIUS = 100
 
-  PATH_FINDER_SECTORS = 64
+  PATH_FINDER_SECTORS = 8
 
   POTENTIALS = {
     Building => -2,
@@ -231,10 +231,6 @@ class CurrentStrategy
     end.first
   end
 
-  def waypoints
-    @waypoints
-  end
-
   def last_waypoint
     waypoints.last
   end
@@ -313,59 +309,6 @@ class CurrentStrategy
   end
 
   def initialize_strategy
-    case @me.owner_player_id
-    when 1, 2, 6, 7
-      @waypoints = waypoints_top
-    when 3, 8
-      @waypoints = waypoints_middle
-    when 4, 5, 9, 10
-      @waypoints = waypoints_bottom
-    end
-  end
-
-  def dummy_go_to_with_turn(point, target)
-    turn_to target if target
-
-    @move.strafe_speed = 3 * Math::sin(@me.angle_to_unit(point))
-    @move.speed = 3 * Math::cos(@me.angle_to_unit(point))
-  end
-
-  def map_size
-    @game.map_size
-  end
-
-  def waypoints_middle
-    [
-      Point2D.new(100, map_size - 100),
-      Point2D.new(600, map_size - 200),
-      Point2D.new(800, map_size - 800),
-      Point2D.new(map_size - 600, 600),
-    ]
-  end
-
-  def waypoints_bottom
-    [
-      Point2D.new(100, map_size - 100),
-      Point2D.new(map_size * 0.75, map_size - 200),
-      Point2D.new(map_size - 400, map_size - 400),
-      Point2D.new(map_size - 200, map_size * 0.25),
-      Point2D.new(map_size - 200, 200),
-    ]
-  end
-
-  def waypoints_top
-    [
-      Point2D.new(100, map_size - 100),
-      Point2D.new(200, map_size * 0.25),
-      Point2D.new(400, 400),
-      Point2D.new(map_size * 0.75, 200),
-      Point2D.new(map_size - 200, 200),
-    ]
-  end
-end
-
-class NewStrategy < CurrentStrategy
-  def initialize_strategy
     klass = case @me.owner_player_id
             when 1, 2, 6, 7
               StrategyTop
@@ -381,6 +324,20 @@ class NewStrategy < CurrentStrategy
   def waypoints
     @strategy.waypoints
   end
+
+  def dummy_go_to_with_turn(point, target)
+    turn_to target if target
+
+    @move.strafe_speed = 3 * Math::sin(@me.angle_to_unit(point))
+    @move.speed = 3 * Math::cos(@me.angle_to_unit(point))
+  end
+
+  def map_size
+    @game.map_size
+  end
+end
+
+class NewStrategy < CurrentStrategy
 end
 
 class MyStrategy
