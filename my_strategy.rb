@@ -331,6 +331,7 @@ end
 
 class NewStrategy < CurrentStrategy
   def go_to(point)
+    return if point.nil?
     places = nearest_places.sort_by do |place|
       potential_field_value_for(place, point)
     end
@@ -363,39 +364,38 @@ class NewStrategy < CurrentStrategy
 
   PATH_FINDER_SECTORS = 64
 
-  BUILDING_POTENTIAL = -0.2
-  DEFAULT_POTENTIAL = -0.2
-  EDGE_POTENTIAL = -0.5
-  CORNER_POTENTIAL = -2
-  TARGET_POTENTIAL = 100
+  POTENTIALS = {
+    Tree => -2,
+    edge: -0.5,
+    corner: -1,
+    target: 10,
+    default: -1
+  }
+
+  def me?(unit)
+    distance_to(unit) < @me.radius
+  end
 
   def potential_field_value_for place, point
     objects = (@world.buildings + @world.trees + @world.minions + @world.wizards).reject do |unit|
-      distance_to(unit) > @me.cast_range
+      me?(unit) || distance_to(unit) > @me.cast_range
     end.map do |unit|
-      v = case unit
-          when Building
-            BUILDING_POTENTIAL / (place.distance_to(unit) - unit.radius) ** 4
-          else
-            DEFAULT_POTENTIAL / (place.distance_to(unit) - unit.radius) ** 4
-          end
-
-      v
+      (POTENTIALS[unit.class] || POTENTIALS[:default]) / (place.distance_to(unit) - unit.radius - @me.radius) ** 2
     end.inject(&:+).to_f
 
     edges = 0
-    edges += EDGE_POTENTIAL / place.x.to_f
-    edges += EDGE_POTENTIAL / place.y.to_f
-    edges += EDGE_POTENTIAL / (@game.map_size - place.x).to_f
-    edges += EDGE_POTENTIAL / (@game.map_size - place.y).to_f
+    edges += POTENTIALS[:edge] / place.x.to_f ** 2
+    edges += POTENTIALS[:edge] / place.y.to_f ** 2
+    edges += POTENTIALS[:edge] / (map_size - place.x).to_f ** 2
+    edges += POTENTIALS[:edge] / (map_size - place.y).to_f ** 2
 
     corners = 0
-    corners += CORNER_POTENTIAL / place.distance_to(Point2D.new(0, 0))
-    corners += CORNER_POTENTIAL / place.distance_to(Point2D.new(@game.map_size, 0))
-    corners += CORNER_POTENTIAL / place.distance_to(Point2D.new(0, @game.map_size))
-    corners += CORNER_POTENTIAL / place.distance_to(Point2D.new(@game.map_size, @game.map_size))
+    corners += POTENTIALS[:corner] / place.distance_to(Point2D.new(0, 0))
+    corners += POTENTIALS[:corner] / place.distance_to(Point2D.new(map_size, 0))
+    corners += POTENTIALS[:corner] / place.distance_to(Point2D.new(0, map_size))
+    corners += POTENTIALS[:corner] / place.distance_to(Point2D.new(map_size, map_size))
 
-    target = TARGET_POTENTIAL / place.distance_to(point)
+    target = POTENTIALS[:target] / place.distance_to(point)
 
     objects + edges + corners + target
   end
@@ -439,7 +439,7 @@ class NewStrategy < CurrentStrategy
 
   def waypoints_bottom
     [
-      Point2D.new(100, map_size - 100),
+      Point2D.new(100, map_size - 50),
       Point2D.new(400, map_size - 100),
       Point2D.new(800, map_size - 200),
       Point2D.new(map_size * 0.25, map_size - 200),
@@ -455,23 +455,17 @@ class NewStrategy < CurrentStrategy
 
   def waypoints_top
     [
-      #Point2D.new(100, map_size - 100),
+      Point2D.new(100, map_size - 100),
       #Point2D.new(100, map_size - 400),
       #Point2D.new(200, map_size - 800),
       #Point2D.new(200, map_size * 0.75),
       #Point2D.new(200, map_size * 0.5),
       #Point2D.new(200, map_size * 0.25),
-      #Point2D.new(200, 200),
+      Point2D.new(500, 500),
       #Point2D.new(map_size * 0.25, 200),
       #Point2D.new(map_size * 0.5, 200),
       #Point2D.new(map_size * 0.75, 200),
       #Point2D.new(map_size - 200, 200),
-    ]
-
-    [
-      Point2D.new(200, 3800),
-      Point2D.new(2000, 2000),
-      Point2D.new(map_size - 200, 200),
     ]
   end
 end
