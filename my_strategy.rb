@@ -3,19 +3,48 @@ require './model/game'
 require './model/move'
 require './model/world'
 
-class Point2D
-  attr_reader :x, :y
-
-  def initialize(x, y)
-    @x, @y = x, y
+class StrategyBase
+  def initialize(me, world, game, move)
+    @me, @world, @game, @move = me, world, game, move
   end
 
-  def distance_to(point)
-    Math::hypot(point.x - @x, point.y - @y)
+  def map_size
+    @game.map_size
   end
+end
 
-  def mirror
-    self.class.new -x, -y
+class StrategyTop < StrategyBase
+  def waypoints
+    [
+      Point2D.new(100, map_size - 100),
+      Point2D.new(200, map_size * 0.25),
+      Point2D.new(400, 400),
+      Point2D.new(map_size * 0.75, 200),
+      Point2D.new(map_size - 200, 200),
+    ]
+  end
+end
+
+class StrategyMiddle < StrategyBase
+  def waypoints
+    [
+      Point2D.new(100, map_size - 100),
+      Point2D.new(600, map_size - 200),
+      Point2D.new(800, map_size - 800),
+      Point2D.new(map_size - 600, 600),
+    ]
+  end
+end
+
+class StrategyBottom < StrategyBase
+  def waypoints
+    [
+      Point2D.new(100, map_size - 100),
+      Point2D.new(map_size * 0.75, map_size - 200),
+      Point2D.new(map_size - 400, map_size - 400),
+      Point2D.new(map_size - 200, map_size * 0.25),
+      Point2D.new(map_size - 200, 200),
+    ]
   end
 end
 
@@ -39,8 +68,6 @@ class CurrentStrategy
 
   def initialize
     @waypoints_by_lane = {}
-    @strafe_direction_counter = 0
-    @strafe_direction = 1
   end
 
   def move(me, world, game, move)
@@ -147,20 +174,6 @@ class CurrentStrategy
     end
   end
 
-  def step_back_from(unit)
-    if previous_waypoint.nil?
-      back_from unit
-    else
-      back_to previous_waypoint
-    end
-
-    strafe!
-  end
-
-  def strafe!
-    @move.strafe_speed = strafe_direction * @game.wizard_strafe_speed
-  end
-
   def attack(unit)
     return if unit.nil?
     return if distance_to(unit) > @me.cast_range
@@ -174,17 +187,6 @@ class CurrentStrategy
       @move.cast_angle = angle_to unit
       @move.min_cast_distance = distance_to(unit) - unit.radius + @game.magic_missile_radius
     end
-  end
-
-  def strafe_direction
-    @strafe_direction_counter += 1
-
-    if @strafe_direction_counter > @me.radius * 2.2
-      @strafe_direction *= -1
-      @strafe_direction_counter = 0
-    end
-
-    @strafe_direction
   end
 
   def distance_to(point)
@@ -229,20 +231,24 @@ class CurrentStrategy
     end.first
   end
 
+  def waypoints
+    @waypoints
+  end
+
   def last_waypoint
-    @waypoints.last
+    waypoints.last
   end
 
   def next_waypoint
-    last_waypoint_index = @waypoints.size - 1
+    last_waypoint_index = waypoints.size - 1
 
     waypoint_index = 0
     while waypoint_index < last_waypoint_index
       waypoint_index += 1
-      waypoint = @waypoints[waypoint_index]
+      waypoint = waypoints[waypoint_index]
 
       if waypoint.distance_to(@me) <= WAYPOINT_RADIUS
-        return @waypoints[waypoint_index + 1]
+        return waypoints[waypoint_index + 1]
       end
 
       if last_waypoint.distance_to(waypoint) <= last_waypoint.distance_to(@me)
@@ -254,15 +260,15 @@ class CurrentStrategy
   end
 
   def previous_waypoint
-    first_waypoint = @waypoints[0]
-    waypoint_index = @waypoints.size - 1
+    first_waypoint = waypoints[0]
+    waypoint_index = waypoints.size - 1
 
     while waypoint_index > 0
       waypoint_index -= 1
-      waypoint = @waypoints[waypoint_index]
+      waypoint = waypoints[waypoint_index]
 
       if waypoint.distance_to(@me) <= WAYPOINT_RADIUS
-        return @waypoints[waypoint_index - 1]
+        return waypoints[waypoint_index - 1]
       end
 
       if first_waypoint.distance_to(waypoint) < first_waypoint.distance_to(@me)
@@ -281,20 +287,8 @@ class CurrentStrategy
     @move.turn = angle_to point
   end
 
-  def turned_to?(point)
-    angle_to(point).abs < @game.staff_sector / 4
-  end
-
   def mirror_point_of(point)
     Point2D.new(@me.x + (@me.x - point.x), @me.y + (@me.y - point.y))
-  end
-
-  def turn_from(point)
-    turn_to mirror_point_of(point)
-  end
-
-  def turned_from?(point)
-    angle_to(mirror_point_of(point)).abs < @game.staff_sector / 4
   end
 
   def go_to(point)
@@ -306,22 +300,6 @@ class CurrentStrategy
 
     # go to place with max potential value
     dummy_go_to_with_turn places.last, current_target
-  end
-
-  def back_to(point)
-    turn_from point
-
-    if turned_from?(point)
-      @move.speed = -@game.wizard_backward_speed
-    end
-  end
-
-  def back_from(point, speed: nil)
-    turn_to point
-
-    if turned_to?(point)
-      @move.speed = -(speed || @game.wizard_backward_speed)
-    end
   end
 
   def initialize_tick(me, world, game, move)
@@ -387,6 +365,22 @@ class CurrentStrategy
 end
 
 class NewStrategy < CurrentStrategy
+  def initialize_strategy
+    klass = case @me.owner_player_id
+            when 1, 2, 6, 7
+              StrategyTop
+            when 3, 8
+              StrategyMiddle
+            when 4, 5, 9, 10
+              StrategyBottom
+            end
+
+    @strategy = klass.new(@me, @world, @game, @move)
+  end
+
+  def waypoints
+    @strategy.waypoints
+  end
 end
 
 class MyStrategy
@@ -404,5 +398,21 @@ class MyStrategy
   # @param [Move] move
   def move(me, world, game, move)
     @strategy.move me, world, game, move
+  end
+end
+
+class Point2D
+  attr_reader :x, :y
+
+  def initialize(x, y)
+    @x, @y = x, y
+  end
+
+  def distance_to(point)
+    Math::hypot(point.x - @x, point.y - @y)
+  end
+
+  def mirror
+    self.class.new -x, -y
   end
 end
