@@ -328,7 +328,7 @@ end
 class NewStrategy < CurrentStrategy
   def go_to(point)
     places = nearest_places.sort_by do |place|
-      potential_field_value_for(place)
+      potential_field_value_for(place, point)
     end
 
     # go to place with max potential value
@@ -336,7 +336,7 @@ class NewStrategy < CurrentStrategy
   end
 
   def nearest_places
-    (0..Math::PI * 2).step(Math::PI / 8).map do |angle|
+    (0..Math::PI * 2).step(Math::PI / 32).map do |angle|
       x1 = Math::cos(angle) * @me.radius + @me.x
       y1 = Math::sin(angle) * @me.radius + @me.y
 
@@ -345,13 +345,19 @@ class NewStrategy < CurrentStrategy
   end
 
   BUILDING_POTENTIAL = -1
+  TREE_POTENTIAL = -0.5
   EDGE_POTENTIAL = -0.5
   CORNER_POTENTIAL = -2
+  TARGET_POTENTIAL = 100
 
-  def potential_field_value_for place
+  def potential_field_value_for place, point
     buildings = @world.buildings.map do |unit|
       BUILDING_POTENTIAL / place.distance_to(unit) ** 2
-    end.inject(&:+)
+    end.inject(&:+).to_f
+
+    trees = @world.trees.reject { |unit| distance_to(unit) > @me.cast_range }.map do |unit|
+      TREE_POTENTIAL / place.distance_to(unit) ** 2
+    end.inject(&:+).to_f
 
     edges = 0
     edges += EDGE_POTENTIAL / place.x.to_f ** 2
@@ -365,7 +371,9 @@ class NewStrategy < CurrentStrategy
     corners += CORNER_POTENTIAL / place.distance_to(Point2D.new(0, @game.map_size)) ** 2
     corners += CORNER_POTENTIAL / place.distance_to(Point2D.new(@game.map_size, @game.map_size)) ** 2
 
-    buildings + edges + corners
+    target = TARGET_POTENTIAL / place.distance_to(point) ** 2
+
+    buildings + edges + corners + trees + target
   end
 
 
