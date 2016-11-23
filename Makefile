@@ -3,6 +3,11 @@ new:
 	sleep 1
 	ruby runner.rb 127.0.0.1 31001 0000000000000000 new
 
+new_middle:
+	java -Xms512m -Xmx2G -server -jar "local-runner.jar" local-runner-modes/render-2.properties &
+	sleep 1
+	ruby runner.rb 127.0.0.1 31001 0000000000000000 new
+
 current:
 	java -Xms512m -Xmx2G -server -jar "local-runner.jar" local-runner-modes/render-1.properties &
 	sleep 1

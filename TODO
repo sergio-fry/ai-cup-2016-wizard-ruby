@@ -1,6 +1,11 @@
 == TODO
 
 === Short List
+* stop running if already too far
+* fix waypoints
+
+* wait with shooting to make last shot
+* potential field of enemies when low HP should be increased
 
 === Poterntial field
 * go closer to building when it is almost destroyed
@@ -23,7 +28,6 @@
 * destroy tree if stucked
 * detect stuck state
 * wait for firiends with health
-* stop running if already too far
 
 === Tour 2
 * learn skills (missles)

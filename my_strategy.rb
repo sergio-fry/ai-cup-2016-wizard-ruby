@@ -365,7 +365,10 @@ class NewStrategy < CurrentStrategy
   PATH_FINDER_SECTORS = 64
 
   POTENTIALS = {
+    Building => -2,
+    Minion => -1,
     Tree => -2,
+    Wizard => -1,
     edge: -0.5,
     corner: -1,
     target: 10,
@@ -431,7 +434,7 @@ class NewStrategy < CurrentStrategy
   def waypoints_middle
     [
       Point2D.new(100, map_size - 100),
-      random_bool ? Point2D.new(600, map_size - 200) : Point2D.new(200, map_size - 600),
+      Point2D.new(600, map_size - 200),
       Point2D.new(800, map_size - 800),
       Point2D.new(map_size - 600, 600),
     ]
@@ -456,16 +459,12 @@ class NewStrategy < CurrentStrategy
   def waypoints_top
     [
       Point2D.new(100, map_size - 100),
-      #Point2D.new(100, map_size - 400),
-      #Point2D.new(200, map_size - 800),
-      #Point2D.new(200, map_size * 0.75),
-      #Point2D.new(200, map_size * 0.5),
-      #Point2D.new(200, map_size * 0.25),
-      Point2D.new(500, 500),
-      #Point2D.new(map_size * 0.25, 200),
-      #Point2D.new(map_size * 0.5, 200),
-      #Point2D.new(map_size * 0.75, 200),
-      #Point2D.new(map_size - 200, 200),
+      Point2D.new(200, map_size * 0.25),
+      Point2D.new(150, 300),
+      Point2D.new(300, 300),
+      Point2D.new(300, 150),
+      Point2D.new(map_size * 0.25, 200),
+      Point2D.new(map_size - 200, 200),
     ]
   end
 end
