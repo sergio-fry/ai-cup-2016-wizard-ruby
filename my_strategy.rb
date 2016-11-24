@@ -38,9 +38,13 @@ class Router
   end
 
   def inversed_router
-    @inversed_router ||= self.class.new waylines.map do |wayline|
-      Line.new wayline.end, wayline.start
-    end
+    @inversed_router ||= begin
+                           inversed_waylines = waylines.map do |wayline|
+                             Line.new wayline.end.x, wayline.end.y, wayline.start.x, wayline.start.y
+                           end.to_a
+
+                           self.class.new inversed_waylines
+                         end
   end
 
   private
@@ -152,7 +156,7 @@ class StrategyBase
   end
 
   def move!
-    go_to next_waypoint, from: previous_waypoint
+    go_to next_waypoint
     attack current_target
 
     keep_safe_distance
@@ -161,7 +165,7 @@ class StrategyBase
   private
 
   def cooldown?
-    @me.remaining_cooldown_ticks_by_action[ActionType::MAGIC_MISSILE] > 20
+    @me.remaining_cooldown_ticks_by_action[ActionType::MAGIC_MISSILE] > 30
   end
 
   def tick
@@ -267,7 +271,7 @@ class StrategyBase
   end
 
   def run_away
-    go_to previous_waypoint, from: next_waypoint
+    go_to previous_waypoint
   end
 
   def nearest_places
@@ -343,13 +347,9 @@ class StrategyBase
   def go_to(point, options={})
     return if point.nil?
 
-    from = options[:from]
-
     places = nearest_places.sort_by do |place|
       v = potential_field_value_for(place) +
         (POTENTIALS[:target] / place.distance_to(point))
-
-      v += (POTENTIALS[:anti_target] / place.distance_to(from)) unless from.nil?
 
       v
     end
@@ -383,17 +383,17 @@ class StrategyTop < StrategyBase
 
   def router
     @router ||= Router.new([
-      Line.new(200, 3200, 200, 200),
-      Line.new(200, 200, 2000, 2000),
-      Line.new(2000, 2000, 600, 3400),
-      Line.new(600, 3400, 200, 3200),
+      # TOP main line
+      Line.new(200, 3200, 200, 800),
+      Line.new(200, 800, 800, 200),
+      Line.new(800, 200, 200, 3400),
     ])
   end
 end
 
 class StrategyTopBonus < StrategyBase
   def move!
-    go_to next_waypoint, from: previous_waypoint
+    go_to next_waypoint
     attack current_target
 
     keep_safe_distance
