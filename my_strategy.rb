@@ -34,24 +34,21 @@ class Router
   end
 
   def previous_waypoint(position)
-    inversed_router.next_waypoint(position)
-  end
-
-  def inversed_router
-    @inversed_router ||= begin
-                           inversed_waylines = waylines.map do |wayline|
-                             Line.new wayline.end.x, wayline.end.y, wayline.start.x, wayline.start.y
-                           end.to_a
-
-                           self.class.new inversed_waylines
-                         end
+    current_wayline(position, :backword).start rescue nil
   end
 
   private
 
-  def current_wayline(position)
+  def current_wayline(position, direction=:forward)
+    if @current_direction != direction
+      @current_direction = direction
+      @previous_waypoint = nil
+    end
+
     unless @current_wayline.nil? 
-      if @current_wayline.end.distance_to(position) < WAYPOINT_RADIUS
+      endpoint = direction == :forward ? @current_wayline.end : @current_wayline.start
+
+      if endpoint.distance_to(position) < WAYPOINT_RADIUS
         @previous_wayline = @current_wayline
       end
     end
@@ -59,7 +56,8 @@ class Router
     @current_wayline = waylines.reject do |line|
       line == @previous_wayline
     end.sort_by do |line|
-      projection_of_point_to_line(position, line).distance_to(position)
+      #projection_of_point_to_line(position, line).distance_to(position)
+      distance_from_point_to_line(position, line)
     end.first
 
     @current_wayline
@@ -165,7 +163,7 @@ class StrategyBase
   private
 
   def cooldown?
-    @me.remaining_cooldown_ticks_by_action[ActionType::MAGIC_MISSILE] > 30
+    @me.remaining_cooldown_ticks_by_action[ActionType::MAGIC_MISSILE] > 10
   end
 
   def tick
@@ -238,7 +236,7 @@ class StrategyBase
       run_away unless has_friend_closer_to_enemy?
     end
 
-    run_away if cooldown?
+    #run_away if cooldown?
   end
 
   def current_target
@@ -288,8 +286,6 @@ class StrategyBase
     return if distance_to(unit) > @me.cast_range
 
     turn_to unit
-    @move.speed = 0
-    @move.strafe_speed = 0
 
     if angle_to(unit).abs < @game.staff_sector / 2
       @move.action = ActionType::MAGIC_MISSILE
@@ -386,7 +382,7 @@ class StrategyTop < StrategyBase
       # TOP main line
       Line.new(200, 3200, 200, 800),
       Line.new(200, 800, 800, 200),
-      Line.new(800, 200, 200, 3400),
+      Line.new(800, 200, 3400, 200),
     ])
   end
 end
