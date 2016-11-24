@@ -11,6 +11,50 @@ class WayLine
   end
 end
 
+class Path
+  WAYPOINT_RADIUS = 50
+  attr_reader :waylines
+
+  def initialize(waylines)
+    @waylines = waylines
+  end
+
+  def next_waypoint(position)
+    current_wayline(position).end
+  end
+
+  def previous_waypoint(position)
+    inversed_path.next_waypoint(position)
+  end
+
+  def inversed_path
+    self.class.new waylines.map do |wayline|
+      WayLine.new wayline.end, wayline.start
+    end
+  end
+
+  private
+
+  def current_wayline(position)
+    waylines.reject do |line|
+      position.distance_to(line.end) < WAYPOINT_RADIUS
+    end.sort_by do |line|
+      distance_from_point_to_line(position, line)
+    end.first
+  end
+
+  def distance_from_point_to_line(point, line)
+    x1, y1 = line.start.x, line.start.y
+    x2, y2 = line.end.x, line.end.y
+
+    a = (y1 - y2)
+    b = (x2 - x1)
+    c = (x1 * y1 - x2 * y1)
+
+    (a * point.x + b * point.y + c).abs / Math::sqrt(a ** 2 + b ** 2)
+  end
+end
+
 class Cache
   attr_accessor :tick
 
@@ -379,47 +423,31 @@ class StrategyTopBonus < StrategyBase
     !@world.bonuses.empty?
   end
 
-  def waylines
-    @waylines ||= [
+  def path
+    @path ||= Path.new([
+      # from bottom to left-top
       WayLine.new(100, map_size - 100, 200, 800),
       WayLine.new(200, 800, 500, 500),
+      
+      # from right-top to left-top
+      WayLine.new(map_size - 100, 100, 800, 200),
+      WayLine.new(800, 200, 500, 500),
+
+      # from left-top to bonus
       WayLine.new(500, 500, 1100, 1100),
-    ]
+    ])
   end
 
   def next_waypoint
     cache.fetch :next_waypoint, expires_in: 80 do
-      current_wayline.end
+      path.next_waypoint Point2D.new(@me.x, @me.y)
     end
   end
 
   def previous_waypoint
     cache.fetch :previous_waypoint, expires_in: 80 do
-      current_wayline.start
+      path.previous_waypoint Point2D.new(@me.x, @me.y)
     end
-  end
-
-  def waypoints
-    waylines.map(&:end)
-  end
-
-  def current_wayline
-    waylines.reject do |line|
-      distance_to(line.end) < WAYPOINT_RADIUS
-    end.sort_by do |line|
-      distance_from_point_to_line(@me, line)
-    end.first
-  end
-
-  def distance_from_point_to_line(point, line)
-    x1, y1 = line.start.x, line.start.y
-    x2, y2 = line.end.x, line.end.y
-
-    a = (y1 - y2)
-    b = (x2 - x1)
-    c = (x1 * y1 - x2 * y1)
-
-    (a * point.x + b * point.y + c).abs / Math::sqrt(a ** 2 + b ** 2)
   end
 end
 
