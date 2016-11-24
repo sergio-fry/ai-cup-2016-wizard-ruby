@@ -49,10 +49,35 @@ end
 
 class StrategyBase
   WAYPOINT_RADIUS = 100
+  LOW_HP_FACTOR = 0.35
+
+  PATH_FINDER_SECTORS = 8
+  MAX_SEED = 3
+
+  POTENTIALS = {
+    Building => -2,
+    Minion => -0.5,
+    Tree => -1,
+    Wizard => -0.5,
+    edge: -0.3,
+    corner: -1,
+    target: 10,
+    anti_target: 0,
+    default: -1,
+    magic_fix: -3,
+  }
+
 
   attr_accessor :me, :world, :game, :move
 
   def initialize
+  end
+
+  def move
+    go_to next_waypoint, from: previous_waypoint
+    attack current_target
+
+    keep_safe_distance
   end
 
   def map_size
@@ -117,138 +142,6 @@ class StrategyBase
     @cache.tick = @world.tick_index
 
     @cache
-  end
-end
-
-class StrategyTop < StrategyBase
-  def waypoints
-    @waypoints ||= [
-      Point2D.new(100, map_size - 100),
-      Point2D.new(200, map_size * 0.25),
-      Point2D.new(400, 400),
-      Point2D.new(map_size * 0.75, 200),
-      Point2D.new(map_size - 200, 200),
-    ]
-  end
-end
-
-class StrategyTopBonus < StrategyBase
-  def waypoints
-    @waypoints ||= [
-      Point2D.new(100, map_size - 100),
-      Point2D.new(200, 800),
-      Point2D.new(500, 500),
-      Point2D.new(1100, 1100),
-    ]
-  end
-
-  def next_waypoint
-    cache.fetch :next_waypoint, expires_in: 80 do
-      current_waypoints[1]
-    end
-  end
-
-  def previous_waypoint
-    cache.fetch :previous_waypoint, expires_in: 80 do
-      current_waypoints[0]
-    end
-  end
-
-  private
-
-  def current_waypoint
-    waypoints.find { |point| @me.distance_to_unit(point) < WAYPOINT_RADIUS }
-  end
-
-  def current_waypoints
-    if current_waypoint.nil?
-      (0..waypoints.size-2).map do  |index|
-        waypoints[index..index+1]
-      end.sort_by do |p1, p2|
-        distance_from_point_to_line(@me, [p1, p2])
-      end.first
-    else
-      i = waypoints.find_index(current_waypoint)
-      p1 = current_waypoint
-      p2 = waypoints[i + 1]
-
-      [p1, p2]
-    end
-  end
-
-  def distance_from_point_to_line(point, line_points)
-    x1, y1 = line_points[0].x, line_points[0].y
-    x2, y2 = line_points[1].x, line_points[1].y
-
-    a = (y1 - y2)
-    b = (x2 - x1)
-    c = (x1 * y1 - x2 * y1)
-
-
-    (a * point.x + b * point.y + c).abs / Math::sqrt(a ** 2 + b ** 2)
-  end
-end
-
-class StrategyMiddle < StrategyBase
-  def waypoints
-    @waypoints ||= [
-      Point2D.new(100, map_size - 100),
-      Point2D.new(600, map_size - 200),
-      Point2D.new(800, map_size - 800),
-      Point2D.new(map_size - 600, 600),
-    ]
-  end
-end
-
-class StrategyBottom < StrategyBase
-  @waypoints ||= def waypoints
-    [
-      Point2D.new(100, map_size - 100),
-      Point2D.new(map_size * 0.75, map_size - 200),
-      Point2D.new(map_size - 400, map_size - 400),
-      Point2D.new(map_size - 200, map_size * 0.25),
-      Point2D.new(map_size - 200, 200),
-    ]
-  end
-end
-
-class CurrentWizard
-  LOW_HP_FACTOR = 0.35
-
-  PATH_FINDER_SECTORS = 8
-  MAX_SEED = 3
-
-  POTENTIALS = {
-    Building => -2,
-    Minion => -0.5,
-    Tree => -1,
-    Wizard => -0.5,
-    edge: -0.3,
-    corner: -1,
-    target: 10,
-    anti_target: 0,
-    default: -1,
-    magic_fix: -3,
-  }
-
-  def initialize
-    @waypoints_by_lane = {}
-  end
-
-  def move(me, world, game, move)
-    initialize_tick(me, world, game, move)
-    initialize_strategy
-
-    go_to next_waypoint, from: previous_waypoint
-    attack current_target
-
-    keep_safe_distance
-  end
-
-  private
-
-  def point
-    Point2D.new @me.x, @me.y
   end
 
   def potential_field_value_for place
@@ -415,6 +308,119 @@ class CurrentWizard
     dummy_go_to_with_turn places.last, current_target
   end
 
+  def dummy_go_to_with_turn(point, target)
+    turn_to target if target
+
+    @move.strafe_speed = MAX_SEED * Math::sin(@me.angle_to_unit(point))
+    @move.speed = MAX_SEED * Math::cos(@me.angle_to_unit(point))
+  end
+end
+
+class StrategyTop < StrategyBase
+  def waypoints
+    @waypoints ||= [
+      Point2D.new(100, map_size - 100),
+      Point2D.new(200, map_size * 0.25),
+      Point2D.new(400, 400),
+      Point2D.new(map_size * 0.75, 200),
+      Point2D.new(map_size - 200, 200),
+    ]
+  end
+end
+
+class StrategyTopBonus < StrategyBase
+  def waypoints
+    @waypoints ||= [
+      Point2D.new(100, map_size - 100),
+      Point2D.new(200, 800),
+      Point2D.new(500, 500),
+      Point2D.new(1100, 1100),
+    ]
+  end
+
+  def next_waypoint
+    cache.fetch :next_waypoint, expires_in: 80 do
+      current_waypoints[1]
+    end
+  end
+
+  def previous_waypoint
+    cache.fetch :previous_waypoint, expires_in: 80 do
+      current_waypoints[0]
+    end
+  end
+
+  private
+
+  def current_waypoint
+    waypoints.find { |point| @me.distance_to_unit(point) < WAYPOINT_RADIUS }
+  end
+
+  def current_waypoints
+    if current_waypoint.nil?
+      (0..waypoints.size-2).map do  |index|
+        waypoints[index..index+1]
+      end.sort_by do |p1, p2|
+        distance_from_point_to_line(@me, [p1, p2])
+      end.first
+    else
+      i = waypoints.find_index(current_waypoint)
+      p1 = current_waypoint
+      p2 = waypoints[i + 1]
+
+      [p1, p2]
+    end
+  end
+
+  def distance_from_point_to_line(point, line_points)
+    x1, y1 = line_points[0].x, line_points[0].y
+    x2, y2 = line_points[1].x, line_points[1].y
+
+    a = (y1 - y2)
+    b = (x2 - x1)
+    c = (x1 * y1 - x2 * y1)
+
+
+    (a * point.x + b * point.y + c).abs / Math::sqrt(a ** 2 + b ** 2)
+  end
+end
+
+class StrategyMiddle < StrategyBase
+  def waypoints
+    @waypoints ||= [
+      Point2D.new(100, map_size - 100),
+      Point2D.new(600, map_size - 200),
+      Point2D.new(800, map_size - 800),
+      Point2D.new(map_size - 600, 600),
+    ]
+  end
+end
+
+class StrategyBottom < StrategyBase
+  @waypoints ||= def waypoints
+    [
+      Point2D.new(100, map_size - 100),
+      Point2D.new(map_size * 0.75, map_size - 200),
+      Point2D.new(map_size - 400, map_size - 400),
+      Point2D.new(map_size - 200, map_size * 0.25),
+      Point2D.new(map_size - 200, 200),
+    ]
+  end
+end
+
+class CurrentWizard
+  def initialize
+    @waypoints_by_lane = {}
+  end
+
+  def move(me, world, game, move)
+    initialize_tick(me, world, game, move)
+    initialize_strategy
+    @strategy.move
+  end
+
+  private
+
   def initialize_tick(me, world, game, move)
     @rndom = Random.new(game.random_seed)
     @me = me
@@ -442,21 +448,6 @@ class CurrentWizard
     @strategy.world = @world
     @strategy.game = @game
     @strategy.move = @move
-  end
-
-  def waypoints
-    @strategy.waypoints
-  end
-
-  def dummy_go_to_with_turn(point, target)
-    turn_to target if target
-
-    @move.strafe_speed = MAX_SEED * Math::sin(@me.angle_to_unit(point))
-    @move.speed = MAX_SEED * Math::cos(@me.angle_to_unit(point))
-  end
-
-  def map_size
-    @game.map_size
   end
 end
 
