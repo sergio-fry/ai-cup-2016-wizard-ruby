@@ -115,6 +115,7 @@ class CurrentWizard
     edge: -0.3,
     corner: -1,
     target: 10,
+    anti_target: -10,
     default: -1,
     magic_fix: -3,
   }
@@ -127,7 +128,7 @@ class CurrentWizard
     initialize_tick(me, world, game, move)
     initialize_strategy
 
-    go_to next_waypoint
+    go_to next_waypoint, from: previous_waypoint
     attack current_target
 
     keep_safe_distance
@@ -204,7 +205,7 @@ class CurrentWizard
   end
 
   def run_away
-    go_to previous_waypoint
+    go_to previous_waypoint, from: next_waypoint
   end
 
   def nearest_places
@@ -285,11 +286,18 @@ class CurrentWizard
     Point2D.new(@me.x + (@me.x - point.x), @me.y + (@me.y - point.y))
   end
 
-  def go_to(point)
+  def go_to(point, options={})
     return if point.nil?
 
+    from = options[:from]
+
     places = nearest_places.sort_by do |place|
-      potential_field_value_for(place) + (POTENTIALS[:target] / place.distance_to(point))
+      v = potential_field_value_for(place) +
+        (POTENTIALS[:target] / place.distance_to(point))
+
+      v += (POTENTIALS[:anti_target] / place.distance_to(from)) unless from.nil?
+
+      v
     end
 
     # go to place with max potential value
