@@ -4,12 +4,65 @@ require './model/move'
 require './model/world'
 
 class StrategyBase
+  WAYPOINT_RADIUS = 100
+
   def initialize(me, world, game, move)
     @me, @world, @game, @move = me, world, game, move
   end
 
   def map_size
     @game.map_size
+  end
+
+  def next_waypoint
+    last_waypoint_index = waypoints.size - 1
+
+    waypoint_index = 0
+    while waypoint_index < last_waypoint_index
+      waypoint_index += 1
+      waypoint = waypoints[waypoint_index]
+
+      if waypoint.distance_to(@me) <= WAYPOINT_RADIUS
+        return waypoints[waypoint_index + 1]
+      end
+
+      if last_waypoint.distance_to(waypoint) <= last_waypoint.distance_to(@me)
+        return waypoint
+      end
+    end
+
+    last_waypoint
+  end
+
+  def last_waypoint
+    waypoints.last
+  end
+
+  def previous_waypoint
+    first_waypoint = waypoints[0]
+    waypoint_index = waypoints.size - 1
+
+    while waypoint_index > 0
+      waypoint_index -= 1
+      waypoint = waypoints[waypoint_index]
+
+      if waypoint.distance_to(@me) <= WAYPOINT_RADIUS
+        return waypoints[waypoint_index - 1]
+      end
+
+      if first_waypoint.distance_to(waypoint) < first_waypoint.distance_to(@me)
+        return waypoint
+      end
+    end
+
+    first_waypoint
+  end
+
+  def waypoints
+    [
+      Point2D.new(100, map_size - 100),
+      Point2D.new(map_size - 200, 200),
+    ]
   end
 end
 
@@ -50,7 +103,6 @@ end
 
 class CurrentWizard
   LOW_HP_FACTOR = 0.35
-  WAYPOINT_RADIUS = 100
 
   PATH_FINDER_SECTORS = 8
 
@@ -114,10 +166,6 @@ class CurrentWizard
 
   def me?(unit)
     distance_to(unit) < @me.radius
-  end
-
-  def home
-    Point2D.new(400, @game.map_size - 400)
   end
 
   def keep_safe_distance
@@ -210,62 +258,18 @@ class CurrentWizard
     end
   end
 
-  def has_friends_nearby?
-    friends.find_all do |unit|
-      distance_to(unit) < @me.cast_range * 2
-    end.any? do |unit|
-      last_waypoint.distance_to(unit) < last_waypoint.distance_to(@me)
-    end
-  end
-
   def nearest_enemy
     enemies.sort_by do |unit|
       distance_to(unit)
     end.first
   end
 
-  def last_waypoint
-    waypoints.last
-  end
-
   def next_waypoint
-    last_waypoint_index = waypoints.size - 1
-
-    waypoint_index = 0
-    while waypoint_index < last_waypoint_index
-      waypoint_index += 1
-      waypoint = waypoints[waypoint_index]
-
-      if waypoint.distance_to(@me) <= WAYPOINT_RADIUS
-        return waypoints[waypoint_index + 1]
-      end
-
-      if last_waypoint.distance_to(waypoint) <= last_waypoint.distance_to(@me)
-        return waypoint
-      end
-    end
-
-    last_waypoint
+    @strategy.next_waypoint
   end
 
   def previous_waypoint
-    first_waypoint = waypoints[0]
-    waypoint_index = waypoints.size - 1
-
-    while waypoint_index > 0
-      waypoint_index -= 1
-      waypoint = waypoints[waypoint_index]
-
-      if waypoint.distance_to(@me) <= WAYPOINT_RADIUS
-        return waypoints[waypoint_index - 1]
-      end
-
-      if first_waypoint.distance_to(waypoint) < first_waypoint.distance_to(@me)
-        return waypoint
-      end
-    end
-
-    first_waypoint
+    @strategy.previous_waypoint
   end
 
   def angle_to(point)
@@ -311,7 +315,7 @@ class CurrentWizard
               StrategyBottom
             end
 
-    @strategy = klass.new(@me, @world, @game, @move)
+    @strategy ||= klass.new(@me, @world, @game, @move)
   end
 
   def waypoints
