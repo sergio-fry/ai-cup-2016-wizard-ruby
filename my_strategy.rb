@@ -131,7 +131,8 @@ end
 
 class StrategyBase
   WAYPOINT_RADIUS = 100
-  LOW_HP_FACTOR = 0.35
+  LOW_HP_FACTOR = 0.3
+  HIGH_HP_FACTOR = 0.7
 
   PATH_FINDER_SECTORS = 8
   MAX_SEED = 10
@@ -163,7 +164,7 @@ class StrategyBase
   private
 
   def cooldown?
-    @me.remaining_cooldown_ticks_by_action[ActionType::MAGIC_MISSILE] > 10
+    @me.remaining_cooldown_ticks_by_action[ActionType::MAGIC_MISSILE] > 25
   end
 
   def tick
@@ -232,8 +233,11 @@ class StrategyBase
 
   def keep_safe_distance
     unless nearest_enemy.nil?
+      run_away if distance_to(nearest_enemy) < @me.cast_range * 0.7
       run_away if distance_to(nearest_enemy) < @me.cast_range * 1.5 if hurts? 
       run_away unless has_friend_closer_to_enemy?
+
+      # TODO: count safe range for each unit type
     end
 
     #run_away if cooldown?
@@ -260,12 +264,16 @@ class StrategyBase
 
   def has_friend_closer_to_enemy?
     friends.any? do |unit|
-      nearest_enemy.get_distance_to_unit(unit) < distance_to(nearest_enemy)
+      nearest_enemy.get_distance_to_unit(unit) < (distance_to(nearest_enemy) - @me.cast_range * 0.1)
     end
   end
 
   def hurts?
     @me.life < @me.max_life * LOW_HP_FACTOR
+  end
+
+  def healthy?
+    @me.life > @me.max_life * HIGH_HP_FACTOR
   end
 
   def run_away
