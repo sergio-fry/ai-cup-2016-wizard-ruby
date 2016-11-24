@@ -6,8 +6,9 @@ require './model/world'
 class StrategyBase
   WAYPOINT_RADIUS = 100
 
-  def initialize(me, world, game, move)
-    @me, @world, @game, @move = me, world, game, move
+  attr_accessor :me, :world, :game, :move
+
+  def initialize
   end
 
   def map_size
@@ -315,7 +316,11 @@ class CurrentWizard
               StrategyBottom
             end
 
-    @strategy ||= klass.new(@me, @world, @game, @move)
+    @strategy ||= klass.new
+    @strategy.me = @me
+    @strategy.world = @world
+    @strategy.game = @game
+    @strategy.move = @move
   end
 
   def waypoints
