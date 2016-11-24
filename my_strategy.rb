@@ -86,7 +86,7 @@ class CurrentWizard
     Point2D.new @me.x, @me.y
   end
 
-  def potential_field_value_for place, point
+  def potential_field_value_for place
     objects = (@world.buildings + @world.trees + @world.minions + @world.wizards).reject do |unit|
       me?(unit) || distance_to(unit) > @me.cast_range
     end.map do |unit|
@@ -109,9 +109,7 @@ class CurrentWizard
     magic_fix += POTENTIALS[:magic_fix] / place.distance_to(Point2D.new(1000, 1000))
     magic_fix += POTENTIALS[:magic_fix] / place.distance_to(Point2D.new(3000, 3000))
 
-    target = POTENTIALS[:target] / place.distance_to(point)
-
-    objects + edges + corners + target + magic_fix
+    objects + edges + corners + magic_fix
   end
 
   def me?(unit)
@@ -157,12 +155,7 @@ class CurrentWizard
   end
 
   def run_away
-    places = nearest_places.sort_by do |place|
-      potential_field_value_for(place, point)
-    end
-
-    # go to place with max potential value
-    dummy_go_to_with_turn home, current_target
+    go_to previous_waypoint
   end
 
   def nearest_places
@@ -291,7 +284,7 @@ class CurrentWizard
     return if point.nil?
 
     places = nearest_places.sort_by do |place|
-      potential_field_value_for(place, point)
+      potential_field_value_for(place) + (POTENTIALS[:target] / place.distance_to(point))
     end
 
     # go to place with max potential value
