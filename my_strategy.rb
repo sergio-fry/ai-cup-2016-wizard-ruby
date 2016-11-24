@@ -80,6 +80,12 @@ class StrategyBase
     keep_safe_distance
   end
 
+  private
+
+  def tick
+    @world.tick_index
+  end
+
   def map_size
     @game.map_size
   end
@@ -139,7 +145,7 @@ class StrategyBase
 
   def cache
     @cache ||= Cache.new
-    @cache.tick = @world.tick_index
+    @cache.tick = tick
 
     @cache
   end
@@ -270,14 +276,6 @@ class StrategyBase
     end.first
   end
 
-  def next_waypoint
-    @strategy.next_waypoint
-  end
-
-  def previous_waypoint
-    @strategy.previous_waypoint
-  end
-
   def angle_to(point)
     @me.get_angle_to(point.x, point.y)
   end
@@ -317,6 +315,7 @@ class StrategyBase
 end
 
 class StrategyTop < StrategyBase
+
   def waypoints
     @waypoints ||= [
       Point2D.new(100, map_size - 100),
@@ -329,6 +328,25 @@ class StrategyTop < StrategyBase
 end
 
 class StrategyTopBonus < StrategyBase
+  def move
+    go_to next_waypoint, from: previous_waypoint
+    attack current_target
+
+    keep_safe_distance
+
+    go_to bonus if see_bonus?
+  end
+
+  private
+
+  def bonus
+    @world.bonuses.sort_by { |b| distance_to(b) }.first
+  end
+
+  def see_bonus?
+    !@world.bonuses.empty?
+  end
+
   def waypoints
     @waypoints ||= [
       Point2D.new(100, map_size - 100),
@@ -349,8 +367,6 @@ class StrategyTopBonus < StrategyBase
       current_waypoints[0]
     end
   end
-
-  private
 
   def current_waypoint
     waypoints.find { |point| @me.distance_to_unit(point) < WAYPOINT_RADIUS }
@@ -440,8 +456,6 @@ class CurrentWizard
             when 4, 5, 9, 10
               StrategyBottom
             end
-
-    klass = StrategyTopBonus
 
     @strategy ||= klass.new
     @strategy.me = @me
