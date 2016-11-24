@@ -60,7 +60,7 @@ class StrategyBase
   end
 
   def waypoints
-    [
+    @waypoints ||= [
       Point2D.new(100, map_size - 100),
       Point2D.new(map_size - 200, 200),
     ]
@@ -69,7 +69,7 @@ end
 
 class StrategyTop < StrategyBase
   def waypoints
-    [
+    @waypoints ||= [
       Point2D.new(100, map_size - 100),
       Point2D.new(200, map_size * 0.25),
       Point2D.new(400, 400),
@@ -79,9 +79,40 @@ class StrategyTop < StrategyBase
   end
 end
 
+class StrategyTopBonus < StrategyBase
+  def waypoints
+    @waypoints ||= [
+      Point2D.new(100, map_size - 100),
+      Point2D.new(200, 400),
+      Point2D.new(400, 400),
+      Point2D.new(1100, 1100),
+    ]
+  end
+
+  def next_waypoint
+    current_waypoints[1]
+  end
+
+  def previous_waypoint
+    current_waypoints[0]
+  end
+
+  def current_waypoints
+    (0..waypoints.size-2).map do  |index|
+      waypoints[index..index+1]
+    end.sort_by do |p1, p2|
+      if @me.distance_to_unit(p2) < WAYPOINT_RADIUS
+        0
+      else
+        @me.distance_to_unit(p1) + @me.distance_to_unit(p2)
+      end
+    end.first
+  end
+end
+
 class StrategyMiddle < StrategyBase
   def waypoints
-    [
+    @waypoints ||= [
       Point2D.new(100, map_size - 100),
       Point2D.new(600, map_size - 200),
       Point2D.new(800, map_size - 800),
@@ -91,7 +122,7 @@ class StrategyMiddle < StrategyBase
 end
 
 class StrategyBottom < StrategyBase
-  def waypoints
+  @waypoints ||= def waypoints
     [
       Point2D.new(100, map_size - 100),
       Point2D.new(map_size * 0.75, map_size - 200),
@@ -323,6 +354,8 @@ class CurrentWizard
             when 4, 5, 9, 10
               StrategyBottom
             end
+
+    klass = StrategyTopBonus
 
     @strategy ||= klass.new
     @strategy.me = @me
