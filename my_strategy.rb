@@ -52,7 +52,7 @@ class StrategyBase
   LOW_HP_FACTOR = 0.35
 
   PATH_FINDER_SECTORS = 8
-  MAX_SEED = 3
+  MAX_SEED = 10
 
   POTENTIALS = {
     Building => -2,
@@ -73,7 +73,7 @@ class StrategyBase
   def initialize
   end
 
-  def move
+  def move!
     go_to next_waypoint, from: previous_waypoint
     attack current_target
 
@@ -315,6 +315,19 @@ class StrategyBase
 end
 
 class StrategyTop < StrategyBase
+  def move!
+    if tick < 2000
+      super
+    else
+      @strategy ||= StrategyTopBonus.new
+      @strategy.me = me
+      @strategy.world = world
+      @strategy.game = game
+      @strategy.move = move
+
+      @strategy.move!
+    end
+  end
 
   def waypoints
     @waypoints ||= [
@@ -328,7 +341,7 @@ class StrategyTop < StrategyBase
 end
 
 class StrategyTopBonus < StrategyBase
-  def move
+  def move!
     go_to next_waypoint, from: previous_waypoint
     attack current_target
 
@@ -429,10 +442,10 @@ class CurrentWizard
     @waypoints_by_lane = {}
   end
 
-  def move(me, world, game, move)
+  def move!(me, world, game, move)
     initialize_tick(me, world, game, move)
     initialize_strategy
-    @strategy.move
+    @strategy.move!
   end
 
   private
@@ -482,7 +495,7 @@ class MyStrategy
   # @param [Game] game
   # @param [Move] move
   def move(me, world, game, move)
-    @wizard.move me, world, game, move
+    @wizard.move! me, world, game, move
   end
 end
 
