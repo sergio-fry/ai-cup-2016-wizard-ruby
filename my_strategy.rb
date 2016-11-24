@@ -3,15 +3,15 @@ require './model/game'
 require './model/move'
 require './model/world'
 
-class WayLine
+class Line
   attr_reader :start, :end
   def initialize(x1, y1, x2, y2)
-    @start = Point2D.new x1, y1
-    @end = Point2D.new x2, y2
+    @start = Point.new x1, y1
+    @end = Point.new x2, y2
   end
 end
 
-class Path
+class Router
   WAYPOINT_RADIUS = 50
   attr_reader :waylines
 
@@ -24,12 +24,12 @@ class Path
   end
 
   def previous_waypoint(position)
-    inversed_path.next_waypoint(position)
+    inversed_router.next_waypoint(position)
   end
 
-  def inversed_path
-    self.class.new waylines.map do |wayline|
-      WayLine.new wayline.end, wayline.start
+  def inversed_router
+    @inversed_router ||= self.class.new waylines.map do |wayline|
+      Line.new wayline.end, wayline.start
     end
   end
 
@@ -52,6 +52,16 @@ class Path
     c = (x1 * y1 - x2 * y1)
 
     (a * point.x + b * point.y + c).abs / Math::sqrt(a ** 2 + b ** 2)
+  end
+
+  def projection_of_point_to_line(point, line)
+    a = line.start
+    b = line.end
+    s = point
+
+    k = ((s.x - a.x) * (b.x - a.x) + (s.y - a.y) * (b.y - a.y)) / ((b.x - a.x) ** 2 + (b.y - a.y) ** 2)
+
+    Point.new(a.x + (b.x - a.x) * k, a.y + (b.y - a.y) * k)
   end
 end
 
@@ -100,7 +110,7 @@ class Cache
 end
 
 class StrategyBase
-  WAYPOINT_RADIUS = 50
+  WAYPOINT_RADIUS = 100
   LOW_HP_FACTOR = 0.35
 
   PATH_FINDER_SECTORS = 8
@@ -146,54 +156,28 @@ class StrategyBase
   end
 
   def next_waypoint
-    last_waypoint_index = waypoints.size - 1
-
-    waypoint_index = 0
-    while waypoint_index < last_waypoint_index
-      waypoint_index += 1
-      waypoint = waypoints[waypoint_index]
-
-      if waypoint.distance_to(@me) <= WAYPOINT_RADIUS
-        return waypoints[waypoint_index + 1]
-      end
-
-      if last_waypoint.distance_to(waypoint) <= last_waypoint.distance_to(@me)
-        return waypoint
-      end
+    cache.fetch :next_waypoint, expires_in: 80 do
+      router.next_waypoint Point.new(@me.x, @me.y)
     end
-
-    last_waypoint
-  end
-
-  def last_waypoint
-    waypoints.last
   end
 
   def previous_waypoint
-    first_waypoint = waypoints[0]
-    waypoint_index = waypoints.size - 1
-
-    while waypoint_index > 0
-      waypoint_index -= 1
-      waypoint = waypoints[waypoint_index]
-
-      if waypoint.distance_to(@me) <= WAYPOINT_RADIUS
-        return waypoints[waypoint_index - 1]
-      end
-
-      if first_waypoint.distance_to(waypoint) < first_waypoint.distance_to(@me)
-        return waypoint
-      end
+    cache.fetch :previous_waypoint, expires_in: 80 do
+      router.previous_waypoint Point.new(@me.x, @me.y)
     end
-
-    first_waypoint
   end
 
   def waypoints
     @waypoints ||= [
-      Point2D.new(100, map_size - 100),
-      Point2D.new(map_size - 200, 200),
+      Point.new(100, map_size - 100),
+      Point.new(map_size - 200, 200),
     ]
+  end
+
+  def router
+    @router ||= Router.new([
+      Line.new(100, map_size - 100, map_size - 200, 200),
+    ])
   end
 
   private
@@ -219,14 +203,14 @@ class StrategyBase
     edges += POTENTIALS[:edge] / (map_size - place.y + @me.radius).to_f ** 2
 
     corners = 0
-    corners += POTENTIALS[:corner] / place.distance_to(Point2D.new(0, 0))
-    corners += POTENTIALS[:corner] / place.distance_to(Point2D.new(map_size, 0))
-    corners += POTENTIALS[:corner] / place.distance_to(Point2D.new(0, map_size))
-    corners += POTENTIALS[:corner] / place.distance_to(Point2D.new(map_size, map_size))
+    corners += POTENTIALS[:corner] / place.distance_to(Point.new(0, 0))
+    corners += POTENTIALS[:corner] / place.distance_to(Point.new(map_size, 0))
+    corners += POTENTIALS[:corner] / place.distance_to(Point.new(0, map_size))
+    corners += POTENTIALS[:corner] / place.distance_to(Point.new(map_size, map_size))
 
     magic_fix = 0
-    magic_fix += POTENTIALS[:magic_fix] / place.distance_to(Point2D.new(1000, 1000))
-    magic_fix += POTENTIALS[:magic_fix] / place.distance_to(Point2D.new(3000, 3000))
+    magic_fix += POTENTIALS[:magic_fix] / place.distance_to(Point.new(1000, 1000))
+    magic_fix += POTENTIALS[:magic_fix] / place.distance_to(Point.new(3000, 3000))
 
     objects + edges + corners + magic_fix
   end
@@ -282,7 +266,7 @@ class StrategyBase
       x1 = Math::cos(angle) * @me.radius + @me.x
       y1 = Math::sin(angle) * @me.radius + @me.y
 
-      Point2D.new x1, y1
+      Point.new x1, y1
     end
   end
 
@@ -302,7 +286,7 @@ class StrategyBase
   end
 
   def distance_to(point)
-    p1 = Point2D.new(point.x, point.y)
+    p1 = Point.new(point.x, point.y)
 
     p1.distance_to(@me)
   end
@@ -344,7 +328,7 @@ class StrategyBase
   end
 
   def mirror_point_of(point)
-    Point2D.new(@me.x + (@me.x - point.x), @me.y + (@me.y - point.y))
+    Point.new(@me.x + (@me.x - point.x), @me.y + (@me.y - point.y))
   end
 
   def go_to(point, options={})
@@ -375,7 +359,7 @@ end
 
 class StrategyTop < StrategyBase
   def move!
-    if false #tick < 2000
+    if true #tick < 2000
       super
     else
       @strategy ||= StrategyTopBonus.new
@@ -388,14 +372,20 @@ class StrategyTop < StrategyBase
     end
   end
 
-  def waypoints
-    @waypoints ||= [
-      Point2D.new(100, map_size - 100),
-      Point2D.new(200, map_size * 0.25),
-      Point2D.new(400, 400),
-      Point2D.new(map_size * 0.75, 200),
-      Point2D.new(map_size - 200, 200),
-    ]
+  def path1
+    @path ||= Router.new([
+      Line.new(100, map_size - 100, 200, map_size * 0.25),
+      Line.new(200, map_size * 0.25, 400, 400),
+      Line.new(400, 400, map_size * 0.75, 200),
+      Line.new(map_size * 0.75, 200, map_size - 200, 200),
+    ])
+  end
+
+  def router
+    puts [me.x, me.y].inspect
+    @router ||= Router.new([
+      Line.new(100, map_size - 100, 100, map_size - 1800),
+    ])
   end
 end
 
@@ -423,41 +413,30 @@ class StrategyTopBonus < StrategyBase
     !@world.bonuses.empty?
   end
 
-  def path
-    @path ||= Path.new([
+  def router
+    @router ||= Router.new([
       # from bottom to left-top
-      WayLine.new(100, map_size - 100, 200, 800),
-      WayLine.new(200, 800, 500, 500),
-      
+      Line.new(100, map_size - 100, 200, 800),
+      Line.new(200, 800, 500, 500),
+
       # from right-top to left-top
-      WayLine.new(map_size - 100, 100, 800, 200),
-      WayLine.new(800, 200, 500, 500),
+      Line.new(map_size - 100, 100, 800, 200),
+      Line.new(800, 200, 500, 500),
 
       # from left-top to bonus
-      WayLine.new(500, 500, 1100, 1100),
+      Line.new(500, 500, 1100, 1100),
     ])
   end
 
-  def next_waypoint
-    cache.fetch :next_waypoint, expires_in: 80 do
-      path.next_waypoint Point2D.new(@me.x, @me.y)
-    end
-  end
-
-  def previous_waypoint
-    cache.fetch :previous_waypoint, expires_in: 80 do
-      path.previous_waypoint Point2D.new(@me.x, @me.y)
-    end
-  end
 end
 
 class StrategyMiddle < StrategyBase
   def waypoints
     @waypoints ||= [
-      Point2D.new(100, map_size - 100),
-      Point2D.new(600, map_size - 200),
-      Point2D.new(800, map_size - 800),
-      Point2D.new(map_size - 600, 600),
+      Point.new(100, map_size - 100),
+      Point.new(600, map_size - 200),
+      Point.new(800, map_size - 800),
+      Point.new(map_size - 600, 600),
     ]
   end
 end
@@ -465,11 +444,11 @@ end
 class StrategyBottom < StrategyBase
   @waypoints ||= def waypoints
   [
-    Point2D.new(100, map_size - 100),
-    Point2D.new(map_size * 0.75, map_size - 200),
-    Point2D.new(map_size - 400, map_size - 400),
-    Point2D.new(map_size - 200, map_size * 0.25),
-    Point2D.new(map_size - 200, 200),
+    Point.new(100, map_size - 100),
+    Point.new(map_size * 0.75, map_size - 200),
+    Point.new(map_size - 400, map_size - 400),
+    Point.new(map_size - 200, map_size * 0.25),
+    Point.new(map_size - 200, 200),
   ]
                  end
 end
@@ -532,11 +511,11 @@ class MyStrategy
   end
 end
 
-class Point2D
+class Point
   attr_reader :x, :y
 
   def initialize(x, y)
-    @x, @y = x, y
+    @x, @y = x.to_f, y.to_f
   end
 
   def distance_to(point)
