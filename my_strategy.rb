@@ -48,17 +48,17 @@ class Cache
 end
 
 class StrategyBase
-  WAYPOINT_RADIUS = 100
+  WAYPOINT_RADIUS = 50
   LOW_HP_FACTOR = 0.35
 
   PATH_FINDER_SECTORS = 8
   MAX_SEED = 10
 
   POTENTIALS = {
-    Building => -2,
-    Minion => -0.5,
-    Tree => -1,
-    Wizard => -0.5,
+    Building => -1,
+    Minion => -0.3,
+    Tree => -0.8,
+    Wizard => -0.3,
     edge: -0.3,
     corner: -1,
     target: 10,
@@ -66,7 +66,6 @@ class StrategyBase
     default: -1,
     magic_fix: -3,
   }
-
 
   attr_accessor :me, :world, :game, :move
 
@@ -81,6 +80,10 @@ class StrategyBase
   end
 
   private
+
+  def cooldown?
+    @me.remaining_cooldown_ticks_by_action[ActionType::MAGIC_MISSILE] > 20
+  end
 
   def tick
     @world.tick_index
@@ -181,8 +184,12 @@ class StrategyBase
   end
 
   def keep_safe_distance
-    run_away if hurts?
-    run_away unless has_friend_closer_to_enemy? unless nearest_enemy.nil?
+    unless nearest_enemy.nil?
+      run_away if distance_to(nearest_enemy) < @me.cast_range * 1.5 if hurts? 
+      run_away unless has_friend_closer_to_enemy?
+    end
+
+    run_away if cooldown?
   end
 
   def current_target
@@ -316,7 +323,7 @@ end
 
 class StrategyTop < StrategyBase
   def move!
-    if tick < 2000
+    if true #tick < 2000
       super
     else
       @strategy ||= StrategyTopBonus.new
@@ -351,6 +358,10 @@ class StrategyTopBonus < StrategyBase
   end
 
   private
+
+  def run_away
+    go_to next_waypoint
+  end
 
   def bonus
     @world.bonuses.sort_by { |b| distance_to(b) }.first
@@ -438,10 +449,6 @@ class StrategyBottom < StrategyBase
 end
 
 class CurrentWizard
-  def initialize
-    @waypoints_by_lane = {}
-  end
-
   def move!(me, world, game, move)
     initialize_tick(me, world, game, move)
     initialize_strategy
