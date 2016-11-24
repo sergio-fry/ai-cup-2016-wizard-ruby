@@ -9,6 +9,12 @@ class Line
     @start = Point.new x1, y1
     @end = Point.new x2, y2
   end
+
+  def include?(point, epsilon=0.1)
+    delta = (start.y - self.end.y) * point.x + (self.end.x - start.x) * point.y + (start.x * self.end.y - self.end.x * start.y)
+
+    delta.abs < epsilon
+  end
 end
 
 class Router

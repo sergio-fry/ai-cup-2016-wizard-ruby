@@ -41,3 +41,15 @@ describe Router do
     expect(projection.distance_to(Point.new(0, 5))).to be_within(0.1).of(0)
   end
 end
+
+describe Line do
+  it 'check inclusion' do
+    line = Line.new(0, 0, 0, 10)
+
+    point = Point.new(0, 5)
+    expect(line.include?(point)).to eq true
+
+    point = Point.new(0.5, 5)
+    expect(line.include?(point)).to eq false
+  end
+end
