@@ -15,6 +15,10 @@ class Line
 
     delta.abs < epsilon
   end
+
+  def to_s
+    "Line(#{start}-#{self.end})"
+  end
 end
 
 class Router
@@ -26,7 +30,7 @@ class Router
   end
 
   def next_waypoint(position)
-    current_wayline(position).end
+    current_wayline(position).end rescue nil
   end
 
   def previous_waypoint(position)
@@ -42,11 +46,19 @@ class Router
   private
 
   def current_wayline(position)
-    waylines.reject do |line|
-      position.distance_to(line.end) < WAYPOINT_RADIUS
+    unless @current_wayline.nil? 
+      if @current_wayline.end.distance_to(position) < WAYPOINT_RADIUS
+        @previous_wayline = @current_wayline
+      end
+    end
+
+    @current_wayline = waylines.reject do |line|
+      line == @previous_wayline
     end.sort_by do |line|
-      distance_from_point_to_line(position, line)
+      projection_of_point_to_line(position, line).distance_to(position)
     end.first
+
+    @current_wayline
   end
 
   def distance_from_point_to_line(point, line)
@@ -124,15 +136,14 @@ class StrategyBase
 
   POTENTIALS = {
     Building => -1,
-    Minion => -0.3,
-    Tree => -0.8,
-    Wizard => -0.3,
+    Minion => -0.1,
+    Tree => -0.1,
+    Wizard => -0.1,
     edge: -0.3,
     corner: -1,
     target: 10,
     anti_target: 0,
-    default: -1,
-    magic_fix: -3,
+    default: -0.1,
   }
 
   attr_accessor :me, :world, :game, :move
@@ -162,15 +173,11 @@ class StrategyBase
   end
 
   def next_waypoint
-    cache.fetch :next_waypoint, expires_in: 80 do
-      router.next_waypoint Point.new(@me.x, @me.y)
-    end
+    router.next_waypoint Point.new(@me.x, @me.y)
   end
 
   def previous_waypoint
-    cache.fetch :previous_waypoint, expires_in: 80 do
-      router.previous_waypoint Point.new(@me.x, @me.y)
-    end
+    router.previous_waypoint Point.new(@me.x, @me.y)
   end
 
   def waypoints
@@ -214,11 +221,7 @@ class StrategyBase
     corners += POTENTIALS[:corner] / place.distance_to(Point.new(0, map_size))
     corners += POTENTIALS[:corner] / place.distance_to(Point.new(map_size, map_size))
 
-    magic_fix = 0
-    magic_fix += POTENTIALS[:magic_fix] / place.distance_to(Point.new(1000, 1000))
-    magic_fix += POTENTIALS[:magic_fix] / place.distance_to(Point.new(3000, 3000))
-
-    objects + edges + corners + magic_fix
+    objects + edges + corners
   end
 
   def me?(unit)
@@ -378,19 +381,12 @@ class StrategyTop < StrategyBase
     end
   end
 
-  def path1
-    @path ||= Router.new([
-      Line.new(100, map_size - 100, 200, map_size * 0.25),
-      Line.new(200, map_size * 0.25, 400, 400),
-      Line.new(400, 400, map_size * 0.75, 200),
-      Line.new(map_size * 0.75, 200, map_size - 200, 200),
-    ])
-  end
-
   def router
-    puts [me.x, me.y].inspect
     @router ||= Router.new([
-      Line.new(100, map_size - 100, 100, map_size - 1800),
+      Line.new(200, 3200, 200, 200),
+      Line.new(200, 200, 2000, 2000),
+      Line.new(2000, 2000, 600, 3400),
+      Line.new(600, 3400, 200, 3200),
     ])
   end
 end
@@ -530,5 +526,9 @@ class Point
 
   def mirror
     self.class.new -x, -y
+  end
+
+  def to_s
+    "(#{@x}, #{@y})"
   end
 end
