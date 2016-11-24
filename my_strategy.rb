@@ -7,7 +7,7 @@ class WayLine
   attr_reader :start, :end
   def initialize(x1, y1, x2, y2)
     @start = Point2D.new x1, y1
-    @end = Point2D.new x2, yw
+    @end = Point2D.new x2, y2
   end
 end
 
@@ -331,7 +331,7 @@ end
 
 class StrategyTop < StrategyBase
   def move!
-    if true #tick < 2000
+    if false #tick < 2000
       super
     else
       @strategy ||= StrategyTopBonus.new
@@ -379,55 +379,45 @@ class StrategyTopBonus < StrategyBase
     !@world.bonuses.empty?
   end
 
-  def waypoints
-    @waypoints ||= [
-      Point2D.new(100, map_size - 100),
-      Point2D.new(200, 800),
-      Point2D.new(500, 500),
-      Point2D.new(1100, 1100),
+  def waylines
+    @waylines ||= [
+      WayLine.new(100, map_size - 100, 200, 800),
+      WayLine.new(200, 800, 500, 500),
+      WayLine.new(500, 500, 1100, 1100),
     ]
   end
 
   def next_waypoint
     cache.fetch :next_waypoint, expires_in: 80 do
-      current_waypoints[1]
+      current_wayline.end
     end
   end
 
   def previous_waypoint
     cache.fetch :previous_waypoint, expires_in: 80 do
-      current_waypoints[0]
+      current_wayline.start
     end
   end
 
-  def current_waypoint
-    waypoints.find { |point| @me.distance_to_unit(point) < WAYPOINT_RADIUS }
+  def waypoints
+    waylines.map(&:end)
   end
 
-  def current_waypoints
-    if current_waypoint.nil?
-      (0..waypoints.size-2).map do  |index|
-        waypoints[index..index+1]
-      end.sort_by do |p1, p2|
-        distance_from_point_to_line(@me, [p1, p2])
-      end.first
-    else
-      i = waypoints.find_index(current_waypoint)
-      p1 = current_waypoint
-      p2 = waypoints[i + 1]
-
-      [p1, p2]
-    end
+  def current_wayline
+    waylines.reject do |line|
+      distance_to(line.end) < WAYPOINT_RADIUS
+    end.sort_by do |line|
+      distance_from_point_to_line(@me, line)
+    end.first
   end
 
-  def distance_from_point_to_line(point, line_points)
-    x1, y1 = line_points[0].x, line_points[0].y
-    x2, y2 = line_points[1].x, line_points[1].y
+  def distance_from_point_to_line(point, line)
+    x1, y1 = line.start.x, line.start.y
+    x2, y2 = line.end.x, line.end.y
 
     a = (y1 - y2)
     b = (x2 - x1)
     c = (x1 * y1 - x2 * y1)
-
 
     (a * point.x + b * point.y + c).abs / Math::sqrt(a ** 2 + b ** 2)
   end
