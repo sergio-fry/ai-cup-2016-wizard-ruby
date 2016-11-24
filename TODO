@@ -1,6 +1,9 @@
 == TODO
 
 === Short List
+* extract strategies
+* switch strategies
+* prev waypoint should give negative potential
 * take bonus
 * stop running if already too far
 

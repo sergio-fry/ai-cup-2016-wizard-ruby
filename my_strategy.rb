@@ -48,7 +48,7 @@ class StrategyBottom < StrategyBase
   end
 end
 
-class CurrentStrategy
+class CurrentWizard
   LOW_HP_FACTOR = 0.35
   WAYPOINT_RADIUS = 100
 
@@ -337,15 +337,15 @@ class CurrentStrategy
   end
 end
 
-class NewStrategy < CurrentStrategy
+class NewWizard < CurrentWizard
 end
 
 class MyStrategy
-  def initialize(strategy_name='current')
-    if strategy_name == 'current'
-      @strategy = CurrentStrategy.new
+  def initialize(algo='current')
+    if algo == 'current'
+      @wizard = CurrentWizard.new
     else
-      @strategy = NewStrategy.new
+      @wizard = NewWizard.new
     end
   end
 
@@ -354,7 +354,7 @@ class MyStrategy
   # @param [Game] game
   # @param [Move] move
   def move(me, world, game, move)
-    @strategy.move me, world, game, move
+    @wizard.move me, world, game, move
   end
 end
 
