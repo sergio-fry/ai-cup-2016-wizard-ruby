@@ -3,6 +3,50 @@ require './model/game'
 require './model/move'
 require './model/world'
 
+class Cache
+  attr_accessor :tick
+
+  def initialize
+    @data = {}
+    @meta = {}
+  end
+
+  def fetch(key, options={}, &block)
+    return read(key) if exists? key
+
+    v = yield
+
+    write key, v, options
+  end
+
+  def write(key, value, options={})
+    expires_in = options[:expires_in]
+    @data[key.to_s] = value
+    @meta[key.to_s] = { expires_in: expires_in, created_at: tick }
+
+    value
+  end
+
+  def read(key)
+    return unless @data.has_key? key.to_s
+    delete(key) if age(key) > @meta[key.to_s][:expires_in].to_i
+    @data[key.to_s]
+  end
+
+  def exists?(key)
+    !read(key).nil?
+  end
+
+  def delete(key)
+    @data.delete key.to_s
+    @meta.delete key.to_s
+  end
+
+  def age(key)
+    tick - @meta[key.to_s][:created_at]
+  end
+end
+
 class StrategyBase
   WAYPOINT_RADIUS = 100
 
@@ -65,6 +109,15 @@ class StrategyBase
       Point2D.new(map_size - 200, 200),
     ]
   end
+
+  private
+
+  def cache
+    @cache ||= Cache.new
+    @cache.tick = @world.tick_index
+
+    @cache
+  end
 end
 
 class StrategyTop < StrategyBase
@@ -83,30 +136,56 @@ class StrategyTopBonus < StrategyBase
   def waypoints
     @waypoints ||= [
       Point2D.new(100, map_size - 100),
-      Point2D.new(200, 400),
-      Point2D.new(400, 400),
+      Point2D.new(200, 800),
+      Point2D.new(500, 500),
       Point2D.new(1100, 1100),
     ]
   end
 
   def next_waypoint
-    current_waypoints[1]
+    cache.fetch :next_waypoint, expires_in: 80 do
+      current_waypoints[1]
+    end
   end
 
   def previous_waypoint
-    current_waypoints[0]
+    cache.fetch :previous_waypoint, expires_in: 80 do
+      current_waypoints[0]
+    end
+  end
+
+  private
+
+  def current_waypoint
+    waypoints.find { |point| @me.distance_to_unit(point) < WAYPOINT_RADIUS }
   end
 
   def current_waypoints
-    (0..waypoints.size-2).map do  |index|
-      waypoints[index..index+1]
-    end.sort_by do |p1, p2|
-      if @me.distance_to_unit(p2) < WAYPOINT_RADIUS
-        0
-      else
-        @me.distance_to_unit(p1) + @me.distance_to_unit(p2)
-      end
-    end.first
+    if current_waypoint.nil?
+      (0..waypoints.size-2).map do  |index|
+        waypoints[index..index+1]
+      end.sort_by do |p1, p2|
+        distance_from_point_to_line(@me, [p1, p2])
+      end.first
+    else
+      i = waypoints.find_index(current_waypoint)
+      p1 = current_waypoint
+      p2 = waypoints[i + 1]
+
+      [p1, p2]
+    end
+  end
+
+  def distance_from_point_to_line(point, line_points)
+    x1, y1 = line_points[0].x, line_points[0].y
+    x2, y2 = line_points[1].x, line_points[1].y
+
+    a = (y1 - y2)
+    b = (x2 - x1)
+    c = (x1 * y1 - x2 * y1)
+
+
+    (a * point.x + b * point.y + c).abs / Math::sqrt(a ** 2 + b ** 2)
   end
 end
 
@@ -137,6 +216,7 @@ class CurrentWizard
   LOW_HP_FACTOR = 0.35
 
   PATH_FINDER_SECTORS = 8
+  MAX_SEED = 3
 
   POTENTIALS = {
     Building => -2,
@@ -146,7 +226,7 @@ class CurrentWizard
     edge: -0.3,
     corner: -1,
     target: 10,
-    anti_target: -10,
+    anti_target: 0,
     default: -1,
     magic_fix: -3,
   }
@@ -371,8 +451,8 @@ class CurrentWizard
   def dummy_go_to_with_turn(point, target)
     turn_to target if target
 
-    @move.strafe_speed = 3 * Math::sin(@me.angle_to_unit(point))
-    @move.speed = 3 * Math::cos(@me.angle_to_unit(point))
+    @move.strafe_speed = MAX_SEED * Math::sin(@me.angle_to_unit(point))
+    @move.speed = MAX_SEED * Math::cos(@me.angle_to_unit(point))
   end
 
   def map_size
