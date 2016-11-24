@@ -3,6 +3,14 @@ require './model/game'
 require './model/move'
 require './model/world'
 
+class WayLine
+  attr_reader :start, :end
+  def initialize(x1, y1, x2, y2)
+    @start = Point2D.new x1, y1
+    @end = Point2D.new x2, yw
+  end
+end
+
 class Cache
   attr_accessor :tick
 
@@ -438,14 +446,14 @@ end
 
 class StrategyBottom < StrategyBase
   @waypoints ||= def waypoints
-    [
-      Point2D.new(100, map_size - 100),
-      Point2D.new(map_size * 0.75, map_size - 200),
-      Point2D.new(map_size - 400, map_size - 400),
-      Point2D.new(map_size - 200, map_size * 0.25),
-      Point2D.new(map_size - 200, 200),
-    ]
-  end
+  [
+    Point2D.new(100, map_size - 100),
+    Point2D.new(map_size * 0.75, map_size - 200),
+    Point2D.new(map_size - 400, map_size - 400),
+    Point2D.new(map_size - 200, map_size * 0.25),
+    Point2D.new(map_size - 200, 200),
+  ]
+                 end
 end
 
 class CurrentWizard
