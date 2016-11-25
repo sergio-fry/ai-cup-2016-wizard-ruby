@@ -145,14 +145,13 @@ end
 
 class StrategyBase
   WAYPOINT_RADIUS = 100
-  LOW_HP_FACTOR = 0.3
-  HIGH_HP_FACTOR = 0.7
+  LOW_HP_FACTOR = 0.4
+  HIGH_HP_FACTOR = 0.8
 
   PATH_FINDER_SECTORS = 8
   MAX_SEED = 10
 
   POTENTIALS = {
-    Building: -0.3,
     edge: -0.3,
     corner: -1,
     target: 10,
@@ -172,9 +171,10 @@ class StrategyBase
     @bonus_strategy.game = game
     @bonus_strategy.move = move
 
-    if healthy? && @bonus_strategy.should_search_for_bonus?
+    if false # healthy? && @bonus_strategy.should_search_for_bonus?
       @bonus_strategy.move!
     else
+      turn_to next_waypoint
       go_to next_waypoint
       attack current_target
       keep_safe_distance
@@ -188,7 +188,7 @@ class StrategyBase
   end
 
   def cooldown?
-    @me.remaining_cooldown_ticks_by_action[ActionType::MAGIC_MISSILE] > 25
+    @me.remaining_cooldown_ticks_by_action[ActionType::MAGIC_MISSILE] > 10
   end
 
   def tick
@@ -269,14 +269,32 @@ class StrategyBase
 
   def keep_safe_distance
     unless nearest_enemy.nil?
-      run_away if distance_to(nearest_enemy) < @me.cast_range * 0.7
-      run_away if distance_to(nearest_enemy) < @me.cast_range * 1.5 if hurts? 
-      run_away unless has_friend_closer_to_enemy?
+      #run_away if distance_to(nearest_enemy) < @me.cast_range * 0.7
+      run_away if too_close_to_orc?
+      run_away if too_close_to_fetish?
 
-      # TODO: count safe range for each unit type
+      run_away if distance_to(nearest_enemy) < @me.cast_range * 1.2 if hurts? 
+
+      run_away unless has_friend_closer_to_enemy? unless healthy?
     end
 
-    #run_away if cooldown?
+    #run_away if cooldown? && !current_target.nil?
+  end
+
+  def too_close_to_orc?
+    enemies(Minion).find_all do |unit|
+      unit.type == MinionType::ORC_WOODCUTTER
+    end.any? do |unit|
+      distance_to(unit) < game.orc_woodcutter_attack_range + 10
+    end
+  end
+
+  def too_close_to_fetish?
+    enemies(Minion).find_all do |unit|
+      unit.type == MinionType::FETISH_BLOWDART
+    end.any? do |unit|
+      distance_to(unit) < game.fetish_blowdart_attack_range + 10
+    end
   end
 
   def current_target
@@ -359,7 +377,7 @@ class StrategyBase
     p1.distance_to(@me)
   end
 
-  def enemies
+  def enemies(klass=LivingUnit)
     units = []
     units.concat @world.buildings
     units.concat @world.wizards
@@ -367,6 +385,8 @@ class StrategyBase
 
     units.flatten.reject do |unit|
       unit.faction == Faction::NEUTRAL || unit.faction == @me.faction
+    end.reject do |unit|
+      !unit.is_a?(klass)
     end
   end
 
@@ -512,8 +532,8 @@ end
 class StrategyMiddle < StrategyBase
   def router
     @router ||= Router.new([
-      Line.new(600, 3400, 2000, 2000),
-      Line.new(2000, 2000, 3400, 600),
+      Line.new(200, 3400, 600, 3400),
+      Line.new(600, 3400, 3400, 600),
 
       #Line.new(200, 800, 200, 3200),
       #Line.new(200, 800, 200, 3200).mirror,
@@ -572,6 +592,8 @@ class CurrentWizard
             when 4, 5, 9, 10
               StrategyBottom
             end
+
+    klass = StrategyMiddle
 
     @strategy ||= klass.new
     @strategy.me = @me
