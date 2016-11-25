@@ -152,6 +152,7 @@ class StrategyBase
   MAX_SEED = 10
 
   POTENTIALS = {
+    Building: -0.3,
     edge: -0.3,
     corner: -1,
     target: 10,
@@ -228,7 +229,13 @@ class StrategyBase
       dist = (place.distance_to(unit) - unit.radius - @me.radius)
 
       v = (POTENTIALS[unit.class] || POTENTIALS[:default]) / dist ** 2
-      v = 0 if dist < 50 unless unit.is_a?(Tree)
+
+      case unit
+      when Tree
+        v = 0 if dist > 1000
+      else
+        v = 0 if dist > 50
+      end
 
       v
     end.inject(&:+).to_f
@@ -317,10 +324,25 @@ class StrategyBase
     turn_to unit
 
     if angle_to(unit).abs < @game.staff_sector / 2
-      @move.action = ActionType::MAGIC_MISSILE
-      @move.cast_angle = angle_to unit
-      @move.min_cast_distance = distance_to(unit) - unit.radius + @game.magic_missile_radius
+
+      if distance_to(nearest_enemy) < game.staff_range
+        turn_to nearest_enemy
+        @move.action = ActionType::STAFF
+      elsif distance_to(nearest_tree) < game.staff_range
+        turn_to nearest_tree
+        @move.action = ActionType::STAFF
+      else
+        @move.action = ActionType::MAGIC_MISSILE
+        @move.cast_angle = angle_to unit
+        @move.min_cast_distance = distance_to(unit) - unit.radius + @game.magic_missile_radius
+      end
     end
+  end
+
+  def nearest_tree
+    @world.trees.sort_by do |unit|
+      distance_to(unit)
+    end.first
   end
 
   def distance_to(point)
@@ -500,6 +522,17 @@ end
 class StrategyBottom < StrategyTop
   def router
     @router ||= super.mirror
+  end
+end
+
+class StrategyTreeKiller < StrategyBase
+  def move!
+    go_to nearest_tree
+    turn_to nearest_tree
+
+    if distance_to(nearest_tree) < game.staff_range
+      @move.action = ActionType::STAFF
+    end
   end
 end
 
