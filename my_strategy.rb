@@ -152,15 +152,11 @@ class StrategyBase
   MAX_SEED = 10
 
   POTENTIALS = {
-    Building => -1,
-    Minion => -0.1,
-    Tree => -0.1,
-    Wizard => -0.1,
     edge: -0.3,
     corner: -1,
     target: 10,
     anti_target: 0,
-    default: -0.1,
+    default: -1,
   }
 
   attr_accessor :me, :world, :game, :move
@@ -229,7 +225,12 @@ class StrategyBase
     objects = (@world.buildings + @world.trees + @world.minions + @world.wizards).reject do |unit|
       me?(unit) || distance_to(unit) > @me.cast_range
     end.map do |unit|
-      (POTENTIALS[unit.class] || POTENTIALS[:default]) / (place.distance_to(unit) - unit.radius - @me.radius) ** 2
+      dist = (place.distance_to(unit) - unit.radius - @me.radius)
+
+      v = (POTENTIALS[unit.class] || POTENTIALS[:default]) / dist ** 2
+      v = 0 if dist < 50 unless unit.is_a?(Tree)
+
+      v
     end.inject(&:+).to_f
 
     edges = 0
