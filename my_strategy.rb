@@ -270,10 +270,8 @@ class StrategyBase
   def keep_safe_distance
     unless nearest_enemy.nil?
       run_away if too_close_to_minion?
-
-      run_away if distance_to(nearest_enemy) < @me.cast_range * 1.2 if hurts? 
-
       run_away unless has_friend_closer_to_enemy? unless healthy?
+      run_away if can_be_damaged? if hurts? 
     end
 
     #run_away if cooldown? && !current_target.nil?
@@ -281,7 +279,24 @@ class StrategyBase
 
   def too_close_to_minion?
     enemies(Minion).any? do |unit|
-      distance_to(unit) < game.orc_woodcutter_attack_range + me.radius + unit.radius
+      case unit.type
+      when MinionType::ORC_WOODCUTTER
+        distance_to(unit) < game.orc_woodcutter_attack_range + me.radius + unit.radius
+      when MinionType::FETISH_BLOWDART
+        distance_to(unit) < game.fetish_blowdart_attack_range + me.radius + unit.radius
+      end
+    end
+  end
+
+  def can_be_damaged?
+    return true if too_close_to_minion?
+
+    return true if enemies(Building).any? do |unit|
+      distance_to(unit) < unit.attack_range + me.radius + unit.radius
+    end
+
+    return true if enemies(Wizard).any? do |unit|
+      distance_to(unit) < unit.cast_range + me.radius + unit.radius
     end
   end
 
@@ -306,7 +321,9 @@ class StrategyBase
 
   def has_friend_closer_to_enemy?
     friends.any? do |unit|
-      nearest_enemy.get_distance_to_unit(unit) < (distance_to(nearest_enemy) - @me.cast_range * 0.1)
+      unless unit.is_a?(Wizard)
+        nearest_enemy.get_distance_to_unit(unit) < (distance_to(nearest_enemy) - @me.cast_range * 0.1)
+      end
     end
   end
 
@@ -339,10 +356,10 @@ class StrategyBase
 
     if angle_to(unit).abs < @game.staff_sector / 2
 
-      if distance_to(nearest_enemy) < game.staff_range
+      if distance_to(nearest_enemy) < (game.staff_range + me.radius + nearest_enemy.radius)
         turn_to nearest_enemy
         @move.action = ActionType::STAFF
-      elsif distance_to(nearest_tree) < game.staff_range
+      elsif distance_to(nearest_tree) < (game.staff_range + me.radius + nearest_enemy.radius)
         turn_to nearest_tree
         @move.action = ActionType::STAFF
       else
