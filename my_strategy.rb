@@ -145,8 +145,8 @@ end
 
 class StrategyBase
   WAYPOINT_RADIUS = 100
-  LOW_HP_FACTOR = 0.4
-  HIGH_HP_FACTOR = 0.8
+  LOW_HP_FACTOR = 0.5
+  HIGH_HP_FACTOR = 0.9
 
   PATH_FINDER_SECTORS = 8
   MAX_SEED = 10
@@ -171,7 +171,7 @@ class StrategyBase
     @bonus_strategy.game = game
     @bonus_strategy.move = move
 
-    if false # healthy? && @bonus_strategy.should_search_for_bonus?
+    if @bonus_strategy.should_search_for_bonus? # && healthy?
       @bonus_strategy.move!
     else
       turn_to next_waypoint
@@ -508,14 +508,26 @@ class StrategyBonus < StrategyBase
   def router
     @router ||= Router.new([
       # TOP main line
-      Line.new(200, 3200, 200, 800),
-      Line.new(200, 800, 700, 700),
+      #Line.new(200, 3200, 200, 800),
+      #Line.new(200, 800, 700, 700),
 
-      Line.new(700, 700, 1100, 1100),
-      Line.new(1100, 1100, 1300, 1300),
+      #Line.new(700, 700, 1100, 1100),
 
-      Line.new(3400, 200, 800, 200),
-      Line.new(800, 200, 700, 700),
+      #Line.new(3400, 200, 800, 200),
+      #Line.new(800, 200, 700, 700),
+      #
+
+
+      # From center to bonus
+      #Line.new(2100, 2000, 1300, 1300),
+      
+      # near Bonus
+      #Line.new(1100, 1100, 1300, 1300),
+      #Line.new(1300, 1300, 1100, 1100),
+
+      Line.new(600, 3400, 2000 - 200, 2000 + 200),
+      Line.new(2000, 2000, 2700, 2700),
+      Line.new(2700, 2700, 2900, 2900),
     ])
   end
 
@@ -552,6 +564,10 @@ class StrategyMiddle < StrategyBase
     @router ||= Router.new([
       Line.new(200, 3400, 600, 3400),
       Line.new(600, 3400, 3400, 600),
+
+
+      Line.new(1200, 1200, 2100, 2000),
+      Line.new(2800, 2800, 2000, 2000),
 
       #Line.new(200, 800, 200, 3200),
       #Line.new(200, 800, 200, 3200).mirror,
