@@ -565,9 +565,13 @@ class StrategyMiddle < StrategyBase
       Line.new(200, 3400, 600, 3400),
       Line.new(600, 3400, 3400, 600),
 
-
       Line.new(1200, 1200, 2100, 2000),
       Line.new(2800, 2800, 2000, 2000),
+
+      # block top and bottom
+      Line.new(200, 3000, 600, 3400),
+      Line.new(1000, 2800, 600, 3400),
+
 
       #Line.new(200, 800, 200, 3200),
       #Line.new(200, 800, 200, 3200).mirror,
