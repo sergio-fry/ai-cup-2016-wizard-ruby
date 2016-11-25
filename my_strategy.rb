@@ -22,6 +22,7 @@ class Line
 end
 
 class Router
+  MAP_SIZE = 4000
   WAYPOINT_RADIUS = 50
   attr_reader :waylines
 
@@ -35,6 +36,14 @@ class Router
 
   def previous_waypoint(position)
     current_wayline(position, :backword).start rescue nil
+  end
+
+  def mirror
+    waylines_mirror = waylines.map do |line|
+      Line.new (MAP_SIZE - line.start.y), (MAP_SIZE - line.start.x), (MAP_SIZE - line.end.y), (MAP_SIZE - line.end.x)
+    end.to_a
+
+    self.class.new waylines_mirror
   end
 
   private
@@ -181,13 +190,6 @@ class StrategyBase
 
   def previous_waypoint
     router.previous_waypoint Point.new(@me.x, @me.y)
-  end
-
-  def waypoints
-    @waypoints ||= [
-      Point.new(100, map_size - 100),
-      Point.new(map_size - 200, 200),
-    ]
   end
 
   def router
@@ -437,26 +439,17 @@ class StrategyTopBonus < StrategyBase
 end
 
 class StrategyMiddle < StrategyBase
-  def waypoints
-    @waypoints ||= [
-      Point.new(100, map_size - 100),
-      Point.new(600, map_size - 200),
-      Point.new(800, map_size - 800),
-      Point.new(map_size - 600, 600),
-    ]
+  def router
+    @router ||= Router.new([
+      Line.new(600, 3400, 3400, 600),
+    ])
   end
 end
 
-class StrategyBottom < StrategyBase
-  @waypoints ||= def waypoints
-  [
-    Point.new(100, map_size - 100),
-    Point.new(map_size * 0.75, map_size - 200),
-    Point.new(map_size - 400, map_size - 400),
-    Point.new(map_size - 200, map_size * 0.25),
-    Point.new(map_size - 200, 200),
-  ]
-                 end
+class StrategyBottom < StrategyTop
+  def router
+    @router ||= super.mirror
+  end
 end
 
 class CurrentWizard
