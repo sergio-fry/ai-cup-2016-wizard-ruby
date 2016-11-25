@@ -507,24 +507,6 @@ class StrategyBonus < StrategyBase
 
   def router
     @router ||= Router.new([
-      # TOP main line
-      #Line.new(200, 3200, 200, 800),
-      #Line.new(200, 800, 700, 700),
-
-      #Line.new(700, 700, 1100, 1100),
-
-      #Line.new(3400, 200, 800, 200),
-      #Line.new(800, 200, 700, 700),
-      #
-
-
-      # From center to bonus
-      #Line.new(2100, 2000, 1300, 1300),
-      
-      # near Bonus
-      #Line.new(1100, 1100, 1300, 1300),
-      #Line.new(1300, 1300, 1100, 1100),
-
       Line.new(600, 3400, 2000 - 200, 2000 + 200),
       Line.new(2000, 2000, 2700, 2700),
       Line.new(2700, 2700, 2900, 2900),
@@ -536,26 +518,11 @@ class StrategyBonus < StrategyBase
   end
 
   def see_bonus?
-    v = !@world.bonuses.empty?
-
-    if v
-      @bonus_exists = true
-    end
-
-    v
-  end
-
-  def next_time_to_search_bonus
-    n = tick / BONUS_PERIOD 
-
-    t = n * BONUS_PERIOD + (BONUS_PERIOD - TIME_BEFORE_BONUS_BORN)
+    !bonus.nil?
   end
 
   def bonus_has_gone?
-    v = @bonus_exists && distance_to(Point.new(1200, 1200)) < @me.vision_range && !see_bonus?
-    @bonus_exists = false if v
-
-    v
+    distance_to(Point.new(2800, 2800)) < @me.vision_range && !see_bonus? && time_after_previous_bonus < TIME_TO_SEARCH
   end
 end
 
@@ -571,16 +538,6 @@ class StrategyMiddle < StrategyBase
       # block top and bottom
       Line.new(200, 3000, 600, 3400),
       Line.new(1000, 2800, 600, 3400),
-
-
-      #Line.new(200, 800, 200, 3200),
-      #Line.new(200, 800, 200, 3200).mirror,
-
-      #Line.new(200, 200, 2000, 2000),
-      #Line.new(200, 200, 2000, 2000).mirror,
-
-      #Line.new(3400, 200, 800, 200),
-      #Line.new(3400, 200, 800, 200).mirror,
     ])
   end
 end
