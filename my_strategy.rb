@@ -270,7 +270,7 @@ class StrategyBase
   def keep_safe_distance
     unless nearest_enemy.nil?
       run_away if too_close_to_minion?
-      run_away unless has_friend_closer_to_enemy? if has_enemies_nearby? # unless healthy?
+      run_away unless has_friend_closer_to_enemy_building? # unless healthy?
       run_away if can_be_damaged? if hurts? 
     end
 
@@ -332,13 +332,11 @@ class StrategyBase
     enemies.reject { |en| distance_to(en) < me.cast_range * 2 }
   end
 
-  def has_enemies_nearby?
-    enemies_nearby.empty?
-  end
+  def has_friend_closer_to_enemy_building?
+    return true if enemies(Building).empty?
 
-  def has_friend_closer_to_enemy?
     enemies(Building).any? do |enemy|
-      distance_to(enemy) < friends.map { |f| f.distance_to_unit(enemy) }.sort.min
+      distance_to(enemy) > friends.map { |f| f.distance_to_unit(enemy) }.sort.min
     end
   end
 
