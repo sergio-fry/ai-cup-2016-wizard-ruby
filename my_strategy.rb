@@ -269,8 +269,7 @@ class StrategyBase
 
   def keep_safe_distance
     unless nearest_enemy.nil?
-      run_away if too_close_to_orc?
-      run_away if too_close_to_fetish?
+      run_away if too_close_to_minion?
 
       run_away if distance_to(nearest_enemy) < @me.cast_range * 1.2 if hurts? 
 
@@ -280,19 +279,9 @@ class StrategyBase
     #run_away if cooldown? && !current_target.nil?
   end
 
-  def too_close_to_orc?
-    enemies(Minion).find_all do |unit|
-      unit.type == MinionType::ORC_WOODCUTTER
-    end.any? do |unit|
+  def too_close_to_minion?
+    enemies(Minion).any? do |unit|
       distance_to(unit) < game.orc_woodcutter_attack_range + me.radius + unit.radius
-    end
-  end
-
-  def too_close_to_fetish?
-    enemies(Minion).find_all do |unit|
-      unit.type == MinionType::FETISH_BLOWDART
-    end.any? do |unit|
-      distance_to(unit) < game.fetish_blowdart_attack_range + me.radius + unit.radius
     end
   end
 
