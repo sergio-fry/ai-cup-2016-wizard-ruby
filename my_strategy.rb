@@ -373,44 +373,74 @@ class StrategyBase
 end
 
 class StrategyTop < StrategyBase
-  def move!
-    if true #tick < 2000
-      super
-    else
-      @strategy ||= StrategyTopBonus.new
-      @strategy.me = me
-      @strategy.world = world
-      @strategy.game = game
-      @strategy.move = move
+  def initialize
+    super
 
-      @strategy.move!
+    @bonus_strategy ||= StrategyTopBonus.new
+  end
+
+  def move!
+    @bonus_strategy.me = me
+    @bonus_strategy.world = world
+    @bonus_strategy.game = game
+    @bonus_strategy.move = move
+
+    if @bonus_strategy.should_search_for_bonus?
+
+      @bonus_strategy.move!
+    else
+      super
     end
   end
 
   def router
     @router ||= Router.new([
       # TOP main line
-      Line.new(200, 3200, 200, 800),
+      Line.new(200, 3200, 200, 800), # bottom-left -> top-left
       Line.new(200, 800, 800, 200),
       Line.new(800, 200, 3400, 200),
+
+      Line.new(2000, 2000, 500, 500), # middle -> left-top
     ])
   end
 end
 
 class StrategyTopBonus < StrategyBase
+  TIME_TO_SEARCH = 1000
+  BONUS_PERIOD = 2500
+
   def move!
-    go_to next_waypoint
-    attack current_target
-
-    keep_safe_distance
-
+    super
     go_to bonus if see_bonus?
+  end
+
+  def should_search_for_bonus?
+    if bonus_has_gone?
+      false
+    else
+      time_before_next_bonus < (TIME_TO_SEARCH / 2) || time_after_previous_bonus < (TIME_TO_SEARCH / 2)
+    end
   end
 
   private
 
-  def run_away
-    go_to next_waypoint
+  def time_before_next_bonus
+    BONUS_PERIOD - tick % BONUS_PERIOD
+  end
+
+  def time_after_previous_bonus
+    tick % BONUS_PERIOD
+  end
+
+  def router
+    @router ||= Router.new([
+      # TOP main line
+      Line.new(200, 3200, 200, 800),
+      Line.new(200, 800, 700, 700),
+      Line.new(700, 700, 1100, 1100),
+      Line.new(3400, 200, 800, 200),
+      Line.new(800, 200, 700, 700),
+    ])
   end
 
   def bonus
@@ -418,24 +448,27 @@ class StrategyTopBonus < StrategyBase
   end
 
   def see_bonus?
-    !@world.bonuses.empty?
+    v = !@world.bonuses.empty?
+
+    if v
+      @bonus_exists = true
+    end
+
+    v
   end
 
-  def router
-    @router ||= Router.new([
-      # from bottom to left-top
-      Line.new(100, map_size - 100, 200, 800),
-      Line.new(200, 800, 500, 500),
+  def next_time_to_search_bonus
+    n = tick / BONUS_PERIOD 
 
-      # from right-top to left-top
-      Line.new(map_size - 100, 100, 800, 200),
-      Line.new(800, 200, 500, 500),
-
-      # from left-top to bonus
-      Line.new(500, 500, 1100, 1100),
-    ])
+    t = n * BONUS_PERIOD + (BONUS_PERIOD - TIME_BEFORE_BONUS_BORN)
   end
 
+  def bonus_has_gone?
+    v = @bonus_exists && distance_to(Point.new(1200, 1200)) < @me.vision_range && !see_bonus?
+    @bonus_exists = false if v
+
+    v
+  end
 end
 
 class StrategyMiddle < StrategyBase

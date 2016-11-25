@@ -3,6 +3,11 @@ new:
 	sleep 1
 	ruby runner.rb 127.0.0.1 31001 0000000000000000 new
 
+empty:
+	java -Xms512m -Xmx2G -server -jar "local-runner.jar" local-runner-modes/render-empty.properties &
+	sleep 1
+	ruby runner.rb 127.0.0.1 31001 0000000000000000 current
+
 server:
 	java -Xms512m -Xmx2G -server -jar "local-runner.jar" local-runner-modes/render-1.properties &
 
