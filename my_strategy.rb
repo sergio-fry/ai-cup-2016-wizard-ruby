@@ -329,7 +329,7 @@ class StrategyBase
   end
 
   def enemies_nearby
-    enemies.reject { |en| distance_to(en) < me.cast_range * 2 }
+    enemies.reject { |en| distance_to(en) < safe_distance_from(en) }
   end
 
   def has_friend_closer_to_enemy_building?
@@ -486,7 +486,9 @@ class StrategyBonus < StrategyBase
   end
 
   def should_search_for_bonus?
-    if tick < 1000
+    if see_bonus?
+      true
+    elsif tick < 1000
       false
     elsif bonus_has_gone?
       false
@@ -496,6 +498,24 @@ class StrategyBonus < StrategyBase
   end
 
   private
+
+  def run_away
+    return if enemies_nearby.empty?
+
+    sum_x, sum_y = 0, 0 
+
+    enemies_nearby.each do |unit|
+      sum_x += unit.x
+      sum_y += unit.y
+    end
+
+    dx = me.x - (sum_x.to_f / enemies_nearby.size)
+    dy = me.y - (sum_y.to_f / enemies_nearby.size)
+
+    target = Point.new(me.x + dx, me.y + dy)
+
+    go_to target
+  end
 
   def time_before_next_bonus
     BONUS_PERIOD - tick % BONUS_PERIOD
@@ -508,6 +528,7 @@ class StrategyBonus < StrategyBase
   def router
     @router ||= Router.new([
       Line.new(600, 3400, 2000 - 200, 2000 + 200),
+      Line.new(3400, 600, 2000 + 200, 2000 - 200),
       Line.new(2000, 2000, 2700, 2700),
       Line.new(2700, 2700, 2900, 2900),
     ])
