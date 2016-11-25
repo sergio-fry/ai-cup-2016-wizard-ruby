@@ -3,6 +3,8 @@ require './model/game'
 require './model/move'
 require './model/world'
 
+MAP_SIZE = 4000
+
 class Line
   attr_reader :start, :end
   def initialize(x1, y1, x2, y2)
@@ -19,10 +21,13 @@ class Line
   def to_s
     "Line(#{start}-#{self.end})"
   end
+
+  def mirror
+    Line.new (MAP_SIZE - self.start.y), (MAP_SIZE - self.start.x), (MAP_SIZE - self.end.y), (MAP_SIZE - self.end.x)
+  end
 end
 
 class Router
-  MAP_SIZE = 4000
   WAYPOINT_RADIUS = 50
   attr_reader :waylines
 
@@ -40,7 +45,7 @@ class Router
 
   def mirror
     waylines_mirror = waylines.map do |line|
-      Line.new (MAP_SIZE - line.start.y), (MAP_SIZE - line.start.x), (MAP_SIZE - line.end.y), (MAP_SIZE - line.end.x)
+      line.mirror
     end.to_a
 
     self.class.new waylines_mirror
@@ -161,16 +166,29 @@ class StrategyBase
   attr_accessor :me, :world, :game, :move
 
   def initialize
+    @bonus_strategy ||= StrategyBonus.new
   end
 
   def move!
-    go_to next_waypoint
-    attack current_target
+    @bonus_strategy.me = me
+    @bonus_strategy.world = world
+    @bonus_strategy.game = game
+    @bonus_strategy.move = move
 
-    keep_safe_distance
+    if @bonus_strategy.should_search_for_bonus?
+      @bonus_strategy.move!
+    else
+      go_to next_waypoint
+      attack current_target
+      keep_safe_distance
+    end
   end
 
   private
+
+  def my_position
+    Point.new(me.x, me.y)
+  end
 
   def cooldown?
     @me.remaining_cooldown_ticks_by_action[ActionType::MAGIC_MISSILE] > 25
@@ -373,26 +391,6 @@ class StrategyBase
 end
 
 class StrategyTop < StrategyBase
-  def initialize
-    super
-
-    @bonus_strategy ||= StrategyTopBonus.new
-  end
-
-  def move!
-    @bonus_strategy.me = me
-    @bonus_strategy.world = world
-    @bonus_strategy.game = game
-    @bonus_strategy.move = move
-
-    if @bonus_strategy.should_search_for_bonus?
-
-      @bonus_strategy.move!
-    else
-      super
-    end
-  end
-
   def router
     @router ||= Router.new([
       # TOP main line
@@ -405,17 +403,23 @@ class StrategyTop < StrategyBase
   end
 end
 
-class StrategyTopBonus < StrategyBase
+class StrategyBonus < StrategyBase
   TIME_TO_SEARCH = 1000
   BONUS_PERIOD = 2500
 
+  def initialize
+  end
+
   def move!
-    super
+    attack current_target
+    go_to next_waypoint
     go_to bonus if see_bonus?
   end
 
   def should_search_for_bonus?
-    if bonus_has_gone?
+    if tick < 1000
+      false
+    elsif bonus_has_gone?
       false
     else
       time_before_next_bonus < (TIME_TO_SEARCH / 2) || time_after_previous_bonus < (TIME_TO_SEARCH / 2)
@@ -437,7 +441,10 @@ class StrategyTopBonus < StrategyBase
       # TOP main line
       Line.new(200, 3200, 200, 800),
       Line.new(200, 800, 700, 700),
+
       Line.new(700, 700, 1100, 1100),
+      Line.new(1100, 1100, 1300, 1300),
+
       Line.new(3400, 200, 800, 200),
       Line.new(800, 200, 700, 700),
     ])
@@ -474,7 +481,17 @@ end
 class StrategyMiddle < StrategyBase
   def router
     @router ||= Router.new([
-      Line.new(600, 3400, 3400, 600),
+      Line.new(600, 3400, 2000, 2000),
+      Line.new(2000, 2000, 3400, 600),
+
+      #Line.new(200, 800, 200, 3200),
+      #Line.new(200, 800, 200, 3200).mirror,
+
+      #Line.new(200, 200, 2000, 2000),
+      #Line.new(200, 200, 2000, 2000).mirror,
+
+      #Line.new(3400, 200, 800, 200),
+      #Line.new(3400, 200, 800, 200).mirror,
     ])
   end
 end
