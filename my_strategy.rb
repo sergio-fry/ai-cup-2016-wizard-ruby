@@ -172,7 +172,7 @@ class StrategyBase
     @bonus_strategy.game = game
     @bonus_strategy.move = move
 
-    if @bonus_strategy.should_search_for_bonus?
+    if healthy? && @bonus_strategy.should_search_for_bonus?
       @bonus_strategy.move!
     else
       go_to next_waypoint
@@ -200,11 +200,19 @@ class StrategyBase
   end
 
   def next_waypoint
-    router.next_waypoint Point.new(@me.x, @me.y)
+    return cache.read(:next_waypoint) if cache.exists?(:next_waypoint)
+
+    p = router.next_waypoint Point.new(@me.x, @me.y)
+
+    cache.write(:next_waypoint, p, expires_in: [50, distance_to(p) / 2].min)
   end
 
   def previous_waypoint
-    router.previous_waypoint Point.new(@me.x, @me.y)
+    return cache.read(:previous_waypoint) if cache.exists?(:previous_waypoint)
+
+    p = router.previous_waypoint Point.new(@me.x, @me.y)
+
+    cache.write(:previous_waypoint, p, expires_in: [50, distance_to(p) / 2].min)
   end
 
   def router
