@@ -240,7 +240,7 @@ class StrategyBase
 
       case unit
       when Tree
-        v = 0 if dist > 1000
+        v = 0 if dist > 500
       else
         v = 0 if dist > 50
       end
@@ -270,34 +270,43 @@ class StrategyBase
   def keep_safe_distance
     unless nearest_enemy.nil?
       run_away if too_close_to_minion?
-      run_away unless has_friend_closer_to_enemy? unless healthy?
+      run_away unless has_friend_closer_to_enemy? if has_enemies_nearby? # unless healthy?
       run_away if can_be_damaged? if hurts? 
     end
 
     #run_away if cooldown? && !current_target.nil?
   end
 
+  def safe_distance_from(unit)
+    attack_distance = 0
+
+    attack_distance = case unit
+                      when Minion
+                        case unit.type
+                        when MinionType::ORC_WOODCUTTER
+                          game.orc_woodcutter_attack_range
+                        when MinionType::FETISH_BLOWDART
+                          game.fetish_blowdart_attack_range
+                        end
+                      when Building
+                        unit.attack_range
+                      when Wizard
+                        unit.cast_range
+                      else
+                        0
+                      end
+
+    attack_distance + @me.radius + unit.radius
+  end
+
   def too_close_to_minion?
     enemies(Minion).any? do |unit|
-      case unit.type
-      when MinionType::ORC_WOODCUTTER
-        distance_to(unit) < game.orc_woodcutter_attack_range + me.radius + unit.radius
-      when MinionType::FETISH_BLOWDART
-        distance_to(unit) < game.fetish_blowdart_attack_range + me.radius + unit.radius
-      end
+      distance_to(unit) < safe_distance_from(unit)
     end
   end
 
   def can_be_damaged?
-    return true if too_close_to_minion?
-
-    return true if enemies(Building).any? do |unit|
-      distance_to(unit) < unit.attack_range + me.radius + unit.radius
-    end
-
-    return true if enemies(Wizard).any? do |unit|
-      distance_to(unit) < unit.cast_range + me.radius + unit.radius
-    end
+    enemies.any? { |u| distance_to(u) < safe_distance_from(u) }
   end
 
   def current_target
@@ -319,11 +328,17 @@ class StrategyBase
     end
   end
 
+  def enemies_nearby
+    enemies.reject { |en| distance_to(en) < me.cast_range * 2 }
+  end
+
+  def has_enemies_nearby?
+    enemies_nearby.empty?
+  end
+
   def has_friend_closer_to_enemy?
-    friends.any? do |unit|
-      unless unit.is_a?(Wizard)
-        nearest_enemy.get_distance_to_unit(unit) < (distance_to(nearest_enemy) - @me.cast_range * 0.1)
-      end
+    enemies(Building).any? do |enemy|
+      distance_to(enemy) < friends.map { |f| f.distance_to_unit(enemy) }.sort.min
     end
   end
 
