@@ -177,14 +177,15 @@ class StrategyBase
       end
 
       attack current_target
-      stop unless current_target.nil?
+      stop(reason: 'has target') unless current_target.nil?
       keep_safe_distance
     end
   end
 
   private
 
-  def stop
+  def stop(options={})
+    log :stop, options[:reason]
     move.speed = 0
     move.strafe_speed = 0
   end
