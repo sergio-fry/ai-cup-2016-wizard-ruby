@@ -27,20 +27,55 @@ class Line
   end
 end
 
+class Wayline
+  def initialize(*points)
+    @points = points
+  end
+
+  def next_waypoint(position)
+    p = nearest_to(position)
+
+    index = @points.find_index(p)
+
+    @points[index + 1]
+  end
+
+  def previous_waypoint(position)
+    p = nearest_to(position)
+
+    index = @points.find_index(p)
+
+    return nil if index == 0
+    @points[index - 1]
+  end
+
+  private
+
+  def nearest_to(point)
+    @points.sort_by { |p| p.distance_to(point) }.first
+  end
+end
+
 class Router
-  WAYPOINT_RADIUS = 50
+  WAYPOINT_RADIUS = 400
   attr_reader :waylines
 
-  def initialize(waylines)
+  def initialize(*waylines)
     @waylines = waylines
   end
 
   def next_waypoint(position)
-    current_wayline(position).end rescue nil
+    waylines.map { |p| p.next_waypoint(position) }
+      .compact.sort_by do |p|
+      p.distance_to(position)
+    end.first
   end
 
   def previous_waypoint(position)
-    current_wayline(position, :backword).start rescue nil
+    waylines.map { |p| p.previous_waypoint(position) }
+      .compact.sort_by do |p|
+      p.distance_to(position)
+    end.first
   end
 
   def mirror
@@ -49,53 +84,6 @@ class Router
     end.to_a
 
     self.class.new waylines_mirror
-  end
-
-  private
-
-  def current_wayline(position, direction=:forward)
-    if @current_direction != direction
-      @current_direction = direction
-      @previous_waypoint = nil
-    end
-
-    unless @current_wayline.nil? 
-      endpoint = direction == :forward ? @current_wayline.end : @current_wayline.start
-
-      if endpoint.distance_to(position) < WAYPOINT_RADIUS
-        @previous_wayline = @current_wayline
-      end
-    end
-
-    @current_wayline = waylines.reject do |line|
-      line == @previous_wayline
-    end.sort_by do |line|
-      #projection_of_point_to_line(position, line).distance_to(position)
-      distance_from_point_to_line(position, line)
-    end.first
-
-    @current_wayline
-  end
-
-  def distance_from_point_to_line(point, line)
-    x1, y1 = line.start.x, line.start.y
-    x2, y2 = line.end.x, line.end.y
-
-    a = (y1 - y2)
-    b = (x2 - x1)
-    c = (x1 * y1 - x2 * y1)
-
-    (a * point.x + b * point.y + c).abs / Math::sqrt(a ** 2 + b ** 2)
-  end
-
-  def projection_of_point_to_line(point, line)
-    a = line.start
-    b = line.end
-    s = point
-
-    k = ((s.x - a.x) * (b.x - a.x) + (s.y - a.y) * (b.y - a.y)) / ((b.x - a.x) ** 2 + (b.y - a.y) ** 2)
-
-    Point.new(a.x + (b.x - a.x) * k, a.y + (b.y - a.y) * k)
   end
 end
 
@@ -154,7 +142,7 @@ class StrategyBase
   POTENTIALS = {
     edge: -0.3,
     corner: -1,
-    target: 10,
+    target: 5,
     anti_target: 0,
     default: -1,
   }
@@ -174,8 +162,10 @@ class StrategyBase
     if @bonus_strategy.should_search_for_bonus? # && healthy?
       @bonus_strategy.move!
     else
-      turn_to next_waypoint
-      go_to next_waypoint
+      waypoint = next_waypoint || previous_waypoint
+      turn_to waypoint
+      go_to waypoint
+
       attack current_target
       keep_safe_distance
     end
@@ -204,7 +194,7 @@ class StrategyBase
 
     p = router.next_waypoint Point.new(@me.x, @me.y)
 
-    cache.write(:next_waypoint, p, expires_in: [50, distance_to(p) / 2].min)
+    cache.write(:next_waypoint, p, expires_in: 50)
   end
 
   def previous_waypoint
@@ -212,7 +202,7 @@ class StrategyBase
 
     p = router.previous_waypoint Point.new(@me.x, @me.y)
 
-    cache.write(:previous_waypoint, p, expires_in: [50, distance_to(p) / 2].min)
+    cache.write(:previous_waypoint, p, expires_in: 50)
   end
 
   def router
@@ -526,12 +516,20 @@ class StrategyBonus < StrategyBase
   end
 
   def router
-    @router ||= Router.new([
-      Line.new(600, 3400, 2000 - 200, 2000 + 200),
-      Line.new(3400, 600, 2000 + 200, 2000 - 200),
-      Line.new(2000, 2000, 2700, 2700),
-      Line.new(2700, 2700, 2900, 2900),
-    ])
+    @router ||= Router.new(
+      Wayline.new(
+        Point.new(600, 3400),
+        Point.new(1900, 2100),
+        Point.new(2700, 2700),
+        Point.new(2900, 2900),
+      ),
+      Wayline.new(
+        Point.new(3400, 600),
+        Point.new(2100, 1900),
+        Point.new(2700, 2700),
+        Point.new(2900, 2900),
+      ),
+    )
   end
 
   def bonus
@@ -549,17 +547,26 @@ end
 
 class StrategyMiddle < StrategyBase
   def router
-    @router ||= Router.new([
-      Line.new(200, 3400, 600, 3400),
-      Line.new(600, 3400, 3400, 600),
+    @router ||= Router.new(
+      Wayline.new(
+        Point.new(600, 3400),
+        Point.new(2000, 2000),
+        Point.new(3400, 600),
+        Point.new(3400, 601),
+      ),
+      Wayline.new(
+        Point.new(100, 2800),
+        Point.new(400, 3400),
+        Point.new(600, 3400),
+      ),
 
-      Line.new(1200, 1200, 2100, 2000),
-      Line.new(2800, 2800, 2000, 2000),
-
-      # block top and bottom
-      Line.new(200, 3000, 600, 3400),
-      Line.new(1000, 2800, 600, 3400),
-    ])
+      #back from right bonus
+      Wayline.new(
+        Point.new(2800, 2800),
+        Point.new(2100, 1900),
+        Point.new(2100, 1901),
+      ),
+    )
   end
 end
 
@@ -590,7 +597,7 @@ class CurrentWizard
   private
 
   def initialize_tick(me, world, game, move)
-    @rndom = Random.new(game.random_seed)
+    @random = Random.new(game.random_seed)
     @me = me
     @world = world
     @game = game
