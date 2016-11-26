@@ -167,6 +167,8 @@ class StrategyBase
     if healthy? && @bonus_strategy.should_search_for_bonus?
       @bonus_strategy.move!
     else
+      return if tick < 50
+
       if next_waypoint
         turn_to next_waypoint
         go_to next_waypoint, reason: 'Next waypoint'
@@ -305,11 +307,13 @@ class StrategyBase
     reachable_enemies.sort_by do |unit|
       k = case unit
           when Wizard
-            1 + Math::hypot(unit.speed_x, unit.speed_y) / game.wizard_forward_speed
+            3 + Math::hypot(unit.speed_x, unit.speed_y) / game.wizard_forward_speed
           when Building
-            3
+            6
+          when Minion
+            1 + Math::hypot(unit.speed_x, unit.speed_y) / game.wizard_forward_speed
           else
-            4 + Math::hypot(unit.speed_x, unit.speed_y) / game.wizard_forward_speed
+            6
           end
 
       k * (unit.life.to_f / unit.max_life)
@@ -320,10 +324,6 @@ class StrategyBase
     enemies.reject do |unit|
       distance_to(unit) > @me.cast_range
     end
-  end
-
-  def enemies_nearby
-    enemies.reject { |en| distance_to(en) < safe_distance_from(en) }
   end
 
   def has_friend_closer_to_enemy?
@@ -503,17 +503,17 @@ class StrategyBonus < StrategyBase
   private
 
   def run_away
-    return if enemies_nearby.empty?
+    return if enemies.empty?
 
     sum_x, sum_y = 0, 0 
 
-    enemies_nearby.each do |unit|
+    enemies.each do |unit|
       sum_x += unit.x
       sum_y += unit.y
     end
 
-    dx = me.x - (sum_x.to_f / enemies_nearby.size)
-    dy = me.y - (sum_y.to_f / enemies_nearby.size)
+    dx = me.x - (sum_x.to_f / enemies.size)
+    dy = me.y - (sum_y.to_f / enemies.size)
 
     target = Point.new(me.x + dx, me.y + dy)
 
