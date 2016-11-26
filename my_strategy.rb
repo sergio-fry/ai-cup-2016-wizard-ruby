@@ -149,6 +149,7 @@ class StrategyBase
     target: 5,
     anti_target: 0,
     default: -2,
+    enemy_k: 2,
   }
 
   attr_accessor :me, :world, :game, :move
@@ -197,19 +198,15 @@ class StrategyBase
   end
 
   def next_waypoint
-    return cache.read(:next_waypoint) if cache.exists?(:next_waypoint)
-
-    p = router.next_waypoint Point.new(@me.x, @me.y)
-
-    cache.write(:next_waypoint, p, expires_in: 50)
+    cache.fetch(:next_waypoint, expires_in: 50) do
+      router.next_waypoint Point.new(@me.x, @me.y)
+    end
   end
 
   def previous_waypoint
-    return cache.read(:previous_waypoint) if cache.exists?(:previous_waypoint)
-
-    p = router.previous_waypoint Point.new(@me.x, @me.y)
-
-    cache.write(:previous_waypoint, p, expires_in: 50)
+    cache.fetch(:previous_waypoint, expires_in: 50) do
+      router.previous_waypoint Point.new(@me.x, @me.y)
+    end
   end
 
   def router
@@ -237,6 +234,8 @@ class StrategyBase
       v = dist <= 0 ? k : k / dist ** 2
 
       v = 0 if dist > 500
+
+      v *= POTENTIALS[:enemy_k] if enemy?(unit)
 
       v
     end.inject(&:+).to_f
@@ -328,9 +327,8 @@ class StrategyBase
   end
 
   def has_friend_closer_to_enemy?
+    # minions are ignored because we a re keeping safe dist from em already
     arr = enemies(Wizard) + enemies(Building)
-
-    puts arr.map(&:class).inspect
 
     return true if arr.empty?
 
@@ -367,7 +365,6 @@ class StrategyBase
     turn_to unit
 
     if angle_to(unit).abs < @game.staff_sector / 2
-
       if distance_to(nearest_enemy) < (game.staff_range + me.radius + nearest_enemy.radius)
         turn_to nearest_enemy
         @move.action = ActionType::STAFF
@@ -400,11 +397,15 @@ class StrategyBase
     units.concat @world.wizards
     units.concat @world.minions
 
-    units.flatten.reject do |unit|
-      unit.faction == Faction::NEUTRAL || unit.faction == @me.faction
+    units.flatten.find_all do |unit|
+      enemy? unit
     end.reject do |unit|
       !unit.is_a?(klass)
     end
+  end
+
+  def enemy?(unit)
+    !(unit.faction == Faction::NEUTRAL || unit.faction == @me.faction)
   end
 
   def friends
@@ -432,14 +433,15 @@ class StrategyBase
     @move.turn = angle_to point
   end
 
-  def mirror_point_of(point)
-    Point.new(@me.x + (@me.x - point.x), @me.y + (@me.y - point.y))
+  def log(tag, msg)
+    @logger ||= {}
+    @logger[tag] = msg
   end
 
   def go_to(point, options={})
     return if point.nil?
 
-    puts "#{tick}: GOTO #{point}, pos: (#{me.x.round},#{me.y.round}), #{options[:reason]}"
+    log :go_to, "go_to #{point}, pos: (#{me.x.round},#{me.y.round}), #{options[:reason]}"
 
     places = nearest_places.sort_by do |place|
       v = potential_field_value_for(place) +
@@ -576,6 +578,7 @@ class StrategyMiddle < StrategyBase
       #back from right bonus
       Wayline.new(
         Point.new(2800, 2800),
+        Point.new(2300, 2300),
         Point.new(1500, 1500),
       ),
     )
