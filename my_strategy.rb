@@ -57,7 +57,6 @@ class Wayline
 end
 
 class Router
-  WAYPOINT_RADIUS = 400
   attr_reader :waylines
 
   def initialize(*waylines)
@@ -132,12 +131,13 @@ class Cache
 end
 
 class StrategyBase
-  WAYPOINT_RADIUS = 100
   LOW_HP_FACTOR = 0.5
   HIGH_HP_FACTOR = 0.9
 
   PATH_FINDER_SECTORS = 8
   MAX_SEED = 10
+
+  DISTANCE_GAP = 50
 
   POTENTIALS = {
     edge: -0.3,
@@ -162,9 +162,12 @@ class StrategyBase
     if @bonus_strategy.should_search_for_bonus? # && healthy?
       @bonus_strategy.move!
     else
-      waypoint = next_waypoint || previous_waypoint
-      turn_to waypoint
-      go_to waypoint
+      if next_waypoint
+        turn_to next_waypoint
+        go_to next_waypoint, reason: 'Next waypoint'
+      else
+        go_to previous_waypoint, reason: 'Prev waypoint'
+      end
 
       attack current_target
       keep_safe_distance
@@ -259,9 +262,9 @@ class StrategyBase
 
   def keep_safe_distance
     unless nearest_enemy.nil?
-      run_away if too_close_to_minion?
-      run_away unless has_friend_closer_to_enemy_building? # unless healthy?
-      run_away if can_be_damaged? if hurts? 
+      run_away(reason: 'too close to minion') if too_close_to_minion?
+      run_away(reason: 'has no friend closer to enemy') unless has_friend_closer_to_enemy? # unless healthy?
+      run_away(reason: 'hurts') if can_be_damaged? if hurts? 
     end
 
     #run_away if cooldown? && !current_target.nil?
@@ -286,7 +289,7 @@ class StrategyBase
                         0
                       end
 
-    attack_distance + @me.radius + unit.radius
+    attack_distance + @me.radius + unit.radius + DISTANCE_GAP
   end
 
   def too_close_to_minion?
@@ -322,10 +325,14 @@ class StrategyBase
     enemies.reject { |en| distance_to(en) < safe_distance_from(en) }
   end
 
-  def has_friend_closer_to_enemy_building?
-    return true if enemies(Building).empty?
+  def has_friend_closer_to_enemy?
+    arr = enemies(Wizard) + enemies(Building)
 
-    enemies(Building).any? do |enemy|
+    puts arr.map(&:class).inspect
+
+    return true if arr.empty?
+
+    arr.any? do |enemy|
       distance_to(enemy) > friends.map { |f| f.distance_to_unit(enemy) }.sort.min
     end
   end
@@ -338,8 +345,8 @@ class StrategyBase
     @me.life > @me.max_life * HIGH_HP_FACTOR
   end
 
-  def run_away
-    go_to previous_waypoint
+  def run_away(options={})
+    go_to previous_waypoint, reason: (options[:reason] || 'Run away')
   end
 
   def nearest_places
@@ -430,6 +437,8 @@ class StrategyBase
   def go_to(point, options={})
     return if point.nil?
 
+    puts "#{tick}: GOTO #{point}, pos: (#{me.x.round},#{me.y.round}), #{options[:reason]}"
+
     places = nearest_places.sort_by do |place|
       v = potential_field_value_for(place) +
         (POTENTIALS[:target] / place.distance_to(point))
@@ -471,8 +480,8 @@ class StrategyBonus < StrategyBase
 
   def move!
     attack current_target
-    go_to next_waypoint
-    go_to bonus if see_bonus?
+    go_to next_waypoint, reason: 'Seek for bonus'
+    go_to(bonus, reason: 'To bonus') if see_bonus?
   end
 
   def should_search_for_bonus?
@@ -504,7 +513,7 @@ class StrategyBonus < StrategyBase
 
     target = Point.new(me.x + dx, me.y + dy)
 
-    go_to target
+    go_to target, reason: 'Run aways (bonus)'
   end
 
   def time_before_next_bonus
@@ -549,22 +558,23 @@ class StrategyMiddle < StrategyBase
   def router
     @router ||= Router.new(
       Wayline.new(
-        Point.new(600, 3400),
+        Point.new(800, 3200),
+        Point.new(1700, 2300),
         Point.new(2000, 2000),
+        Point.new(2300, 1700),
         Point.new(3400, 600),
         Point.new(3400, 601),
       ),
       Wayline.new(
         Point.new(100, 2800),
         Point.new(400, 3400),
-        Point.new(600, 3400),
+        Point.new(800, 3200),
       ),
 
       #back from right bonus
       Wayline.new(
         Point.new(2800, 2800),
-        Point.new(2100, 1900),
-        Point.new(2100, 1901),
+        Point.new(1500, 1500),
       ),
     )
   end
