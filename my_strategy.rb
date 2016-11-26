@@ -131,8 +131,7 @@ class Cache
 end
 
 class StrategyBase
-  LOW_HP_FACTOR = 0.5
-  HIGH_HP_FACTOR = 0.9
+  LOW_HP_FACTOR = 0.3
 
   PATH_FINDER_SECTORS = 8
   MAX_SEED = 10
@@ -140,11 +139,16 @@ class StrategyBase
   DISTANCE_GAP = 50
 
   POTENTIALS = {
+    Wizard => -1,
+    Minion => -0.5,
+    Tree => -0.2,
+    Building => -0.3,
+
     edge: -0.3,
     corner: -1,
     target: 5,
     anti_target: 0,
-    default: -1,
+    default: -2,
   }
 
   attr_accessor :me, :world, :game, :move
@@ -159,7 +163,7 @@ class StrategyBase
     @bonus_strategy.game = game
     @bonus_strategy.move = move
 
-    if @bonus_strategy.should_search_for_bonus? # && healthy?
+    if healthy? && @bonus_strategy.should_search_for_bonus?
       @bonus_strategy.move!
     else
       if next_waypoint
@@ -229,14 +233,10 @@ class StrategyBase
     end.map do |unit|
       dist = (place.distance_to(unit) - unit.radius - @me.radius)
 
-      v = (POTENTIALS[unit.class] || POTENTIALS[:default]) / dist ** 2
+      k = (POTENTIALS[unit.class] || POTENTIALS[:default])
+      v = dist <= 0 ? k : k / dist ** 2
 
-      case unit
-      when Tree
-        v = 0 if dist > 500
-      else
-        v = 0 if dist > 50
-      end
+      v = 0 if dist > 500
 
       v
     end.inject(&:+).to_f
@@ -305,10 +305,12 @@ class StrategyBase
   def current_target
     reachable_enemies.sort_by do |unit|
       k = case unit
-          when Wizard, Building
-            1
-          else
+          when Wizard
+            1 + Math::hypot(unit.speed_x, unit.speed_y) / game.wizard_forward_speed
+          when Building
             3
+          else
+            4 + Math::hypot(unit.speed_x, unit.speed_y) / game.wizard_forward_speed
           end
 
       k * (unit.life.to_f / unit.max_life)
@@ -342,7 +344,7 @@ class StrategyBase
   end
 
   def healthy?
-    @me.life > @me.max_life * HIGH_HP_FACTOR
+    !hurts?
   end
 
   def run_away(options={})
@@ -375,7 +377,7 @@ class StrategyBase
       else
         @move.action = ActionType::MAGIC_MISSILE
         @move.cast_angle = angle_to unit
-        @move.min_cast_distance = distance_to(unit) - unit.radius + @game.magic_missile_radius
+        @move.min_cast_distance = distance_to(unit) - unit.radius * 2 + @game.magic_missile_radius
       end
     end
   end
