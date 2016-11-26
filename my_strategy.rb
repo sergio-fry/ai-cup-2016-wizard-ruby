@@ -177,11 +177,17 @@ class StrategyBase
       end
 
       attack current_target
+      stop unless current_target.nil?
       keep_safe_distance
     end
   end
 
   private
+
+  def stop
+    move.speed = 0
+    move.strafe_speed = 0
+  end
 
   def my_position
     Point.new(me.x, me.y)
@@ -311,7 +317,7 @@ class StrategyBase
           when Building
             6
           when Minion
-            1 + Math::hypot(unit.speed_x, unit.speed_y) / game.wizard_forward_speed
+            2 + Math::hypot(unit.speed_x, unit.speed_y) / game.wizard_forward_speed
           else
             6
           end
