@@ -152,7 +152,7 @@ class StrategyBase
     enemy_k: 2,
   }
 
-  attr_accessor :me, :world, :game, :move
+  attr_accessor :me, :world, :game, :move, :random
 
   def initialize
     @bonus_strategy ||= StrategyBonus.new
@@ -167,7 +167,7 @@ class StrategyBase
     if healthy? && @bonus_strategy.should_search_for_bonus?
       @bonus_strategy.move!
     else
-      return if tick < 600 # wait minions
+      return if tick < 200 # wait minions
 
       if next_waypoint
         turn_to next_waypoint
@@ -187,7 +187,7 @@ class StrategyBase
   def stop(options={})
     log :stop, options[:reason]
     move.speed = 0
-    move.strafe_speed = 0
+    move.strafe_speed = @random.rand(1000) > 500 ? -1 : 1
   end
 
   def my_position
@@ -659,6 +659,7 @@ class CurrentWizard
     @strategy.world = @world
     @strategy.game = @game
     @strategy.move = @move
+    @strategy.random = @random
   end
 end
 
