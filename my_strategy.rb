@@ -173,8 +173,12 @@ class StrategyBase
         go_to previous_waypoint, reason: 'Prev waypoint'
       end
 
-      attack current_target
-      stop(reason: 'has target') unless current_target.nil?
+
+      unless current_target.nil?
+        attack current_target
+        #stop(reason: "has target #{unit_to_s(current_target)} #{distance_to(current_target)}") if distance_to(current_target) < (me.cast_range - current_target.radius - unit_speed(current_target))
+      end
+
       keep_safe_distance
     end
 
@@ -183,12 +187,18 @@ class StrategyBase
 
   private
 
+  def unit_speed(unit)
+    Math::hypot(unit.speed_x, unit.speed_y)
+  end
+
   def print_logs
     return unless ENV['LOGGER']
     
     @logger.each do |tag, msg|
-      puts "#{tick} #{tag} #{msg}"
+      puts "#{tick} #{my_position}: #{tag} #{msg}"
     end
+
+    @logger = {}
   end
 
   def stop(options={})
@@ -215,7 +225,9 @@ class StrategyBase
   end
 
   def cooldown?
-    @me.remaining_cooldown_ticks_by_action[ActionType::MAGIC_MISSILE] > 10
+    v = @me.remaining_cooldown_ticks_by_action[ActionType::MAGIC_MISSILE] > 0
+
+    v
   end
 
   def tick
@@ -353,6 +365,10 @@ class StrategyBase
     end
   end
 
+  def unit_to_s(unit)
+    "#{unit.class}(#{unit.x.round},#{unit.y.round})"
+  end
+
   def has_friend_closer_to_enemy?
     # minions are ignored because we a re keeping safe dist from em already
     arr = enemies([Wizard, Building])
@@ -395,6 +411,9 @@ class StrategyBase
   end
 
   def magick_missle!(target)
+    return if cooldown?
+
+    log :attack, "missle #{target.class}(#{target.x.round}, #{target.y.round})"
     move.action = ActionType::MAGIC_MISSILE
     move.cast_angle = angle_to target
     move.min_cast_distance = distance_to(target) - target.radius * 2 + game.magic_missile_radius
@@ -405,9 +424,12 @@ class StrategyBase
   end
 
   def exceptional_attack
-    unsafe_enemies([Minion, Wizard]).each do |enemy|
-      turn_to enemy
-      magick_missle! enemy
+    return if cooldown?
+
+    unsafe_enemies([Minion, Wizard]).each do |target|
+      log :attack, "[EXCEPTIONAL] missle #{target.class}(#{target.x.round}, #{target.y.round})"
+      turn_to target
+      magick_missle! target
     end
   end
 
@@ -471,9 +493,10 @@ class StrategyBase
   end
 
   def go_to(point, options={})
+    log :go_to, "empty point given #{options[:reason]}"
     return if point.nil?
 
-    log :go_to, "go_to #{point}, pos: (#{me.x.round},#{me.y.round}), #{options[:reason]}"
+    log :go_to, "#{point} #{options[:reason]}"
 
     places = nearest_places.sort_by do |place|
       v = potential_field_value_for(place) +
@@ -508,7 +531,8 @@ class StrategyTop < StrategyBase
 end
 
 class StrategyBonus < StrategyBase
-  TIME_TO_SEARCH = 1000
+  TIME_TO_SEARCH = 500
+  TIME_WAIT_FOR_BONUS = 100
   BONUS_PERIOD = 2500
 
   def initialize
@@ -521,14 +545,16 @@ class StrategyBonus < StrategyBase
   end
 
   def should_search_for_bonus?
+
     if see_bonus?
       true
+    elsif (distance_to(Point.new(2000, 2000)) > 2000) && (distance_to(Point.new(2800, 2800)) > 1500)
     elsif tick < 1000
       false
     elsif bonus_has_gone?
       false
     else
-      time_before_next_bonus < (TIME_TO_SEARCH / 2) || time_after_previous_bonus < (TIME_TO_SEARCH / 2)
+      time_before_next_bonus < TIME_TO_SEARCH || time_after_previous_bonus < TIME_WAIT_FOR_BONUS
     end
   end
 
@@ -619,10 +645,10 @@ class StrategyMiddle < StrategyBase
       #back from right bonus
       Wayline.new(
         Point.new(2800, 2800),
+        Point.new(2300, 2300),
+        Point.new(2200, 2200),
+        Point.new(2100, 2100),
         Point.new(2000, 2000),
-        Point.new(2300, 1700),
-        Point.new(3400, 600),
-        Point.new(3400, 601),
       ),
     )
   end
@@ -642,6 +668,14 @@ class StrategyTreeKiller < StrategyBase
     if distance_to(nearest_tree) < game.staff_range
       @move.action = ActionType::STAFF
     end
+  end
+end
+
+class StrategyStrafeFighter < StrategyBase
+  def move!
+    return if tick < 200
+    move.strafe_speed = 10
+    move.action = ActionType::MAGIC_MISSILE
   end
 end
 
@@ -722,6 +756,6 @@ class Point
   end
 
   def to_s
-    "(#{@x}, #{@y})"
+    "(#{@x.round}, #{@y.round})"
   end
 end
