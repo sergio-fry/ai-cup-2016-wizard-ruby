@@ -141,7 +141,7 @@ class StrategyBase
   POTENTIALS = {
     Wizard => -1,
     Minion => -0.5,
-    Tree => -0.2,
+    Tree => -1,
     Building => -0.3,
 
     edge: -0.3,
@@ -370,23 +370,24 @@ class StrategyBase
     return if distance_to(unit) > @me.cast_range
 
     turn_to unit
-
-    if angle_to(unit).abs < @game.staff_sector / 2
-      @move.action = ActionType::MAGIC_MISSILE
-      @move.cast_angle = angle_to unit
-      @move.min_cast_distance = distance_to(unit) - unit.radius * 2 + @game.magic_missile_radius
-    end
-
+    magick_missle!(unit) if angle_to(unit).abs < @game.staff_sector / 2
     exceptional_attack
   end
 
-  def unsafe_enemies(klasses)
+  def magick_missle!(target)
+    move.action = ActionType::MAGIC_MISSILE
+    move.cast_angle = angle_to target
+    move.min_cast_distance = distance_to(target) - target.radius * 2 + game.magic_missile_radius
+  end
+
+  def unsafe_enemies(klasses=LivingUnit)
+    enemies(klasses).find_all { |u| distance_to(u) < safe_distance_from(u) }
   end
 
   def exceptional_attack
-    if false && distance_to(nearest_enemy(Wizard) < safe_distance_from(nearest_enemy(Wizard)))
-      turn_to nearest_enemy
-      @move.action = ActionType::STAFF
+    unsafe_enemies([Minion, Wizard]).each do |enemy|
+      turn_to enemy
+      magick_missle! enemy
     end
 
     # STAFF ATTACK
