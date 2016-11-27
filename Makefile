@@ -1,7 +1,7 @@
 current:
 	java -Xms512m -Xmx2G -server -jar "local-runner.jar" local-runner-modes/render-1.properties &
 	sleep 1
-	ruby runner.rb 127.0.0.1 31001 0000000000000000 current
+	LOGGER=1 ruby runner.rb 127.0.0.1 31001 0000000000000000 current
 
 check:
 	java -Xms512m -Xmx2G -server -jar "local-runner.jar" local-runner-modes/render-check.properties &

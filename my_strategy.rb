@@ -71,10 +71,7 @@ class Router
   end
 
   def previous_waypoint(position)
-    waylines.map { |p| p.previous_waypoint(position) }
-      .compact.sort_by do |p|
-      p.distance_to(position)
-    end.first
+    waylines.first.previous_waypoint(position)
   end
 
   def mirror
@@ -180,14 +177,37 @@ class StrategyBase
       stop(reason: 'has target') unless current_target.nil?
       keep_safe_distance
     end
+
+    print_logs
   end
 
   private
 
+  def print_logs
+    return unless ENV['LOGGER']
+    
+    @logger.each do |tag, msg|
+      puts "#{tick} #{tag} #{msg}"
+    end
+  end
+
   def stop(options={})
     log :stop, options[:reason]
     move.speed = 0
-    move.strafe_speed = @random.rand(1000) > 500 ? -1 : 1
+    move.strafe_speed = strafe_speed
+  end
+
+  def strafe_speed
+    @strafe_direction ||= 1
+    @strafe_direction_counter ||= 0
+
+    if @strafe_direction_counter > 50
+      @strafe_direction_counter = 0
+      @strafe_direction *= -1
+    end
+
+    @strafe_direction_counter += 1
+    move.strafe_speed = @strafe_direction * 10
   end
 
   def my_position
@@ -307,7 +327,7 @@ class StrategyBase
   end
 
   def can_be_damaged?
-    enemies.any? { |u| distance_to(u) < safe_distance_from(u) }
+    enemies([Wizard, Minion]).any? { |u| distance_to(u) < safe_distance_from(u) }
   end
 
   def current_target
@@ -388,15 +408,6 @@ class StrategyBase
     unsafe_enemies([Minion, Wizard]).each do |enemy|
       turn_to enemy
       magick_missle! enemy
-    end
-
-    # STAFF ATTACK
-    if distance_to(nearest_enemy) < (game.staff_range + me.radius + nearest_enemy.radius)
-      turn_to nearest_enemy
-      @move.action = ActionType::STAFF
-    elsif distance_to(nearest_tree) < (game.staff_range + me.radius + nearest_enemy.radius)
-      turn_to nearest_tree
-      @move.action = ActionType::STAFF
     end
   end
 
@@ -590,17 +601,28 @@ class StrategyMiddle < StrategyBase
         Point.new(3400, 600),
         Point.new(3400, 601),
       ),
+
+      # block from top
       Wayline.new(
         Point.new(100, 2800),
         Point.new(400, 3400),
         Point.new(800, 3200),
       ),
 
+      # block from bottom
+      Wayline.new(
+        Point.new(1200, 3900),
+        Point.new(600, 3600),
+        Point.new(800, 3200),
+      ),
+
       #back from right bonus
       Wayline.new(
         Point.new(2800, 2800),
-        Point.new(2300, 2300),
-        Point.new(1500, 1500),
+        Point.new(2000, 2000),
+        Point.new(2300, 1700),
+        Point.new(3400, 600),
+        Point.new(3400, 601),
       ),
     )
   end
