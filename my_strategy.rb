@@ -346,11 +346,11 @@ class StrategyBase
     reachable_enemies.sort_by do |unit|
       k = case unit
           when Wizard
-            3 + Math::hypot(unit.speed_x, unit.speed_y) / game.wizard_forward_speed
+            3 + Math::hypot(unit.speed_x, unit.speed_y) / game.wizard_forward_speed + distance_to(unit) / me.cast_range
           when Building
             6
           when Minion
-            2 + Math::hypot(unit.speed_x, unit.speed_y) / game.wizard_forward_speed
+            2 + Math::hypot(unit.speed_x, unit.speed_y) / game.wizard_forward_speed + distance_to(unit) / me.cast_range
           else
             6
           end
