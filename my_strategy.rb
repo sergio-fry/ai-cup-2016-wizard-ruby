@@ -167,7 +167,7 @@ class StrategyBase
     if healthy? && @bonus_strategy.should_search_for_bonus?
       @bonus_strategy.move!
     else
-      return if tick < 50
+      return if tick < 600 # wait minions
 
       if next_waypoint
         turn_to next_waypoint
@@ -335,7 +335,7 @@ class StrategyBase
 
   def has_friend_closer_to_enemy?
     # minions are ignored because we a re keeping safe dist from em already
-    arr = enemies(Wizard) + enemies(Building)
+    arr = enemies([Wizard, Building])
 
     return true if arr.empty?
 
@@ -372,17 +372,30 @@ class StrategyBase
     turn_to unit
 
     if angle_to(unit).abs < @game.staff_sector / 2
-      if distance_to(nearest_enemy) < (game.staff_range + me.radius + nearest_enemy.radius)
-        turn_to nearest_enemy
-        @move.action = ActionType::STAFF
-      elsif distance_to(nearest_tree) < (game.staff_range + me.radius + nearest_enemy.radius)
-        turn_to nearest_tree
-        @move.action = ActionType::STAFF
-      else
-        @move.action = ActionType::MAGIC_MISSILE
-        @move.cast_angle = angle_to unit
-        @move.min_cast_distance = distance_to(unit) - unit.radius * 2 + @game.magic_missile_radius
-      end
+      @move.action = ActionType::MAGIC_MISSILE
+      @move.cast_angle = angle_to unit
+      @move.min_cast_distance = distance_to(unit) - unit.radius * 2 + @game.magic_missile_radius
+    end
+
+    exceptional_attack
+  end
+
+  def unsafe_enemies(klasses)
+  end
+
+  def exceptional_attack
+    if false && distance_to(nearest_enemy(Wizard) < safe_distance_from(nearest_enemy(Wizard)))
+      turn_to nearest_enemy
+      @move.action = ActionType::STAFF
+    end
+
+    # STAFF ATTACK
+    if distance_to(nearest_enemy) < (game.staff_range + me.radius + nearest_enemy.radius)
+      turn_to nearest_enemy
+      @move.action = ActionType::STAFF
+    elsif distance_to(nearest_tree) < (game.staff_range + me.radius + nearest_enemy.radius)
+      turn_to nearest_tree
+      @move.action = ActionType::STAFF
     end
   end
 
@@ -407,7 +420,7 @@ class StrategyBase
     units.flatten.find_all do |unit|
       enemy? unit
     end.reject do |unit|
-      !unit.is_a?(klass)
+      klass.is_a?(Array) ? klass.none? { |k| unit.is_a?(k) } : !unit.is_a?(klass)
     end
   end
 
@@ -426,8 +439,8 @@ class StrategyBase
     end
   end
 
-  def nearest_enemy
-    enemies.sort_by do |unit|
+  def nearest_enemy(klass=LivingUnit)
+    enemies(klass).sort_by do |unit|
       distance_to(unit)
     end.first
   end
