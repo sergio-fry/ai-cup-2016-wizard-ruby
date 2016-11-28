@@ -1,4 +1,4 @@
-current:
+current: build
 	java -Xms512m -Xmx2G -server -jar "local-runner.jar" local-runner-modes/render-1.properties &
 	sleep 1
 	LOGGER=1 ruby runner.rb 127.0.0.1 31001 0000000000000000 current
@@ -63,3 +63,7 @@ compare:
 	sleep 1
 	ruby runner.rb 127.0.0.1 31004 0000000000000000 current 
 	ruby compare_results.rb
+
+build:
+	cat my_strategy_header.rb > my_strategy.rb
+	cat lib/ai_bot/*.rb >> my_strategy.rb

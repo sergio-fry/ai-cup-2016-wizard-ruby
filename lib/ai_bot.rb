@@ -1,0 +1,2 @@
+module AiBot
+end
