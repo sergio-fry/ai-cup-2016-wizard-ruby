@@ -74,6 +74,6 @@ describe AiBot::World do
     me1 = world.unit_by_id me.id
     tree1 = world.unit_by_id tree.id
 
-    expect(me1.distance_to_unit(tree)).to >= (me.radius + tree.radius)
+    expect(me1.distance_to_unit(tree1) >= (me.radius + tree.radius)).to eq true
   end
 end

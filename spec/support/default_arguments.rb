@@ -87,3 +87,35 @@ def wizard_attrs(overrides={})
     attrs[:messages],
   ]
 end
+
+def tree_attrs(overrides={})
+  defaults = {
+    id: 300,
+    x: 1200,
+    y: 1200,
+    speed_x: 0,
+    speed_y: 0,
+    angle: 0,
+    faction: Faction::NEUTRAL,
+    radius: 30,
+    life: 15,
+    max_life: 15,
+    statuses: []
+  }
+
+  attrs = defaults.merge overrides
+
+  [
+    attrs[:id],
+    attrs[:x],
+    attrs[:y],
+    attrs[:speed_x],
+    attrs[:speed_y],
+    attrs[:angle],
+    attrs[:faction],
+    attrs[:radius],
+    attrs[:life],
+    attrs[:max_life],
+    attrs[:statuses],
+  ]
+end

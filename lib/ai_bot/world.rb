@@ -57,7 +57,18 @@ module AiBot
     end
 
     def refresh_positions
-      units.each { |w| w.x += w.speed_x; w.y += w.speed_y }
+      units.each do |unit|
+        new_position = Point.new unit.x + unit.speed_x, unit.y + unit.speed_y
+
+        collision = units.any? do |u|
+          u.id != unit.id && u.distance_to_unit(new_position) < (unit.radius + u.radius)
+        end
+
+        unless collision
+          unit.x += unit.speed_x
+          unit.y += unit.speed_y
+        end
+      end
     end
 
     def clone_units
