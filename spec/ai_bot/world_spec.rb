@@ -76,4 +76,7 @@ describe AiBot::World do
 
     expect(me1.distance_to_unit(tree1) >= (me.radius + tree.radius)).to eq true
   end
+
+  it 'should limit turn angle'
+  it 'should limit speed'
 end

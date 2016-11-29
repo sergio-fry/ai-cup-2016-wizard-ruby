@@ -18,6 +18,10 @@ module AiBot
       w
     end
 
+    def refresh_moving_units
+      @moving_units = units.find_all { |u| (u.speed_x.abs + u.speed_y.abs) > 0 }
+    end
+
     def tick!(moves={})
       @moves = moves
       clone_units
@@ -57,17 +61,25 @@ module AiBot
     end
 
     def refresh_positions
-      units.each do |unit|
-        new_position = Point.new unit.x + unit.speed_x, unit.y + unit.speed_y
+      (wizards + minions).each do |unit|
+        new_position = Point.new(unit.x + unit.speed_x, unit.y + unit.speed_y)
 
-        collision = units.any? do |u|
-          u.id != unit.id && u.distance_to_unit(new_position) < (unit.radius + u.radius)
+        # detect collision for units with moves (for me only)
+        if @moves.keys.include? unit.id
+          collision = units.any? do |u|
+            min_dist = (u.radius + unit.radius) + 10
+
+            u.id != unit.id &&
+              (u.x - new_position.x).abs < min_dist &&
+              (u.y - new_position.y).abs < min_dist &&
+              u.distance_to_unit(new_position) < min_dist
+          end
+
+          next if collision
         end
 
-        unless collision
-          unit.x += unit.speed_x
-          unit.y += unit.speed_y
-        end
+        unit.x = new_position.x
+        unit.y = new_position.y
       end
     end
 
