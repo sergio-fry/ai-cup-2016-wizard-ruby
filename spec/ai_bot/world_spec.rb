@@ -1,8 +1,16 @@
 require 'spec_helper'
 
 describe AiBot::World do
-  let(:me) { AiBot::Wizard.new(*wizard_attrs(angle: 0)) }
-  let(:world) { AiBot::World.new(*world_attrs(wizards: [me])) }
+  let(:me) do
+    Wizard.new(*wizard_attrs(angle: 0)).extend(AiBot::Unit)
+  end
+
+  let(:world) do
+    w = World.new(*world_attrs(wizards: [me]))
+
+    AiBot::World.init_from w
+  end
+
   let(:game) { Game.new *([nil]*111) }
   let(:epsilon) { 0.01 }
 
@@ -39,7 +47,6 @@ describe AiBot::World do
 
     world.tick!({ me.id => move })
 
-    # 3 (100.2, 3697.01), 0.0998334166468311,-0.9950041652778054, angle:-1.4707963267948965
     me3 = world.unit_by_id(me.id)
     expect(me3.x).to be_within(epsilon).of(100.2)
     expect(me3.y).to be_within(epsilon).of(3697.01)
@@ -47,4 +54,7 @@ describe AiBot::World do
     expect(me3.speed_y).to be_within(epsilon).of(-0.9950041652778054)
     expect(me3.angle).to be_within(epsilon).of(-1.4707963267948965)
   end
+
+  it 'should not allow collisions'
+  it 'should fix angle'
 end

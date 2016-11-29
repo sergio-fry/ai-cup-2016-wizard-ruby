@@ -3,17 +3,43 @@ module AiBot
     attr_accessor :me, :world, :game, :move
 
     def move!
-      puts "#{world.tick_index} #{my_position}, #{me.speed_x},#{me.speed_y}, angle:#{me.angle}"
+      m = best_move
 
-      if world.tick_index == 0
-        move.turn = 0.1
+      move.speed = m.speed
+      move.turn = m.turn
+    end
+
+    private
+
+    def best_move
+      ai_world = AiBot::World.init_from(world)
+
+      generate_moves.sort_by do |move|
+        -evalution_func(simulate(ai_world, move))
+      end.first
+    end
+
+    def generate_moves
+      (-3..4).map do |speed|
+        m = Move.new
+        m.speed = speed
+
+        m
       end
-
-      move.speed = 1
     end
 
-    def my_position
-      Point.new me.x, me.y
+    def simulate(ai_world, move)
+      w = ai_world.clone
+      w.tick! me.id => move
+
+      w
     end
+
+    def evalution_func(ai_world)
+      wizard = ai_world.unit_by_id me.id
+
+      [wizard.y, ai_world.height - wizard.y].min
+    end
+
   end
 end
