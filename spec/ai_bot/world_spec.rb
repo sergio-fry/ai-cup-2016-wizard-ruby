@@ -13,6 +13,7 @@ describe AiBot::World do
 
   let(:game) { Game.new *([nil]*111) }
   let(:epsilon) { 0.01 }
+  let(:tree) { Tree.new(*tree_attrs).extend(AiBot::Unit) }
 
   it 'should update position when turned and moved' do
     me.angle = -1.5707963267948966
@@ -55,6 +56,24 @@ describe AiBot::World do
     expect(me3.angle).to be_within(epsilon).of(-1.4707963267948965)
   end
 
-  it 'should not allow collisions'
-  it 'should fix angle'
+  it 'should not allow collisions' do
+    me.angle = 0
+    me.x = 400
+    me.y = 400
+
+    tree.x = me.x + me.radius + tree.radius
+    tree.y = me.y
+
+    world.trees = [tree]
+
+    move = Move.new
+    move.speed = 1
+
+    world.tick!({ me.id => move })
+
+    me1 = world.unit_by_id me.id
+    tree1 = world.unit_by_id tree.id
+
+    expect(me1.distance_to_unit(tree)).to >= (me.radius + tree.radius)
+  end
 end

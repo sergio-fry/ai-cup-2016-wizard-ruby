@@ -52,7 +52,7 @@ module AiBot
       @moves.each do |id, move|
         unit = unit_by_id(id)
 
-        unit.angle = unit.angle + move.turn
+        unit.angle = Utils.normalize_angle(unit.angle + move.turn) 
       end
     end
 
