@@ -1,23 +1,49 @@
 module AiBot
-  class World
+  class World < World
     attr_accessor :move
 
-    def initialize(me, world, game)
-      @world = world
-      @game = game
-      @me = me
+    def tick!(moves={})
+      @moves = moves
+      clone_units
 
-      @wizards = @world.wizards.map { |w| AiBot::Wizard.new(w) }
+      apply_speed
+      apply_turns
+      refresh_positions
     end
 
-    def tick!(move)
-      me.speed_x = move.speed
-
-      @wizards = @wizards.map(&:clone).map { |w| w.x += w.speed_x; w.y += w.speed_y; w }
+    def unit_by_id(id)
+      units.find { |u| u.id == id }
     end
 
-    def me
-      @wizards.find { |w| w.id == @me.id }
+    def units
+      wizards + minions + buildings + trees
+    end
+
+    private
+
+    def apply_speed
+      @moves.each do |id, move|
+        unit = unit_by_id(id)
+
+        unit.speed_x = move.speed * Math.cos(unit.angle)
+        unit.speed_y = move.speed * Math.sin(unit.angle)
+      end
+    end
+
+    def apply_turns
+      @moves.each do |id, move|
+        unit = unit_by_id(id)
+
+        unit.angle = unit.angle + move.turn
+      end
+    end
+
+    def refresh_positions
+      units.each { |w| w.x += w.speed_x; w.y += w.speed_y }
+    end
+
+    def clone_units
+      @wizards = @wizards.map(&:clone)
     end
   end
 end

@@ -3,17 +3,13 @@ module AiBot
     attr_accessor :me, :world, :game, :move
 
     def move!
-      attrs = {
-        life: me.life,
-        mana: me.mana,
-        vision_range: me.vision_range,
-        cast_range: me.cast_range,
-        xp: me.xp,
-        level: me.level,
-        remaining_action_cooldown_ticks: me.remaining_action_cooldown_ticks,
-        remaining_cooldown_ticks_by_action: me.remaining_cooldown_ticks_by_action,
-      }
-      puts "#{world.tick_index} #{attrs.inspect}"
+      puts "#{world.tick_index} #{my_position}, #{me.speed_x},#{me.speed_y}, angle:#{me.angle}"
+
+      if world.tick_index == 0
+        move.turn = 0.1
+      end
+
+      move.speed = 1
     end
 
     def my_position
