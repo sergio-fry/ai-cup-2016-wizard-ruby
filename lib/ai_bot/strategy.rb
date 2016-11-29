@@ -8,6 +8,7 @@ module AiBot
       move.speed = m.speed
       move.turn = m.turn
 
+      #print '|'
       #puts "#{world.tick_index} speed: #{move.speed}, angle: #{move.turn}"
     end
 
@@ -16,9 +17,14 @@ module AiBot
     def best_move
       ai_world = AiBot::World.init_from(world)
 
-      generate_moves.repeated_combination(3).sort_by do |moves|
+      generate_moves.repeated_combination(4).reject{ |moves| reject_move_sequence?(moves) }.sort_by do |moves|
         -evalution_func(simulate(ai_world, moves))
       end.first.first
+    end
+
+    def reject_move_sequence?(moves)
+      moves.any? { |m| m.speed != moves.first.speed } ||
+        (0..moves.size-2).any? { |i| moves[i].turn * moves[i+1].turn < 0 }
     end
 
     def generate_moves
@@ -37,6 +43,7 @@ module AiBot
       w = ai_world.clone
 
       moves.each do |m|
+        #print 'm'
         w.tick! me.id => m
       end
 
@@ -65,7 +72,7 @@ module AiBot
 
       #puts "#{edges}, #{corners}, #{collision_penalty}"
 
-      edges + corners * 2 + 10 * collision_penalty
+      edges + corners * 2 + 100 * collision_penalty
     end
 
   end
