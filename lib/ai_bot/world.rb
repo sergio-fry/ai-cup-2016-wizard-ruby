@@ -61,22 +61,20 @@ module AiBot
     end
 
     def refresh_positions
-      (wizards + minions).each do |unit|
+      # move my wizard only
+      @moves.map { |id, _| unit_by_id(id) }.each do |unit|
         new_position = Point.new(unit.x + unit.speed_x, unit.y + unit.speed_y)
 
-        # detect collision for units with moves (for me only)
-        if @moves.keys.include? unit.id
-          collision = units.any? do |u|
-            min_dist = (u.radius + unit.radius) + 10
+        collision = units.any? do |u|
+          min_dist = (u.radius + unit.radius) + 10
 
-            u.id != unit.id &&
-              (u.x - new_position.x).abs < min_dist &&
-              (u.y - new_position.y).abs < min_dist &&
-              u.distance_to_unit(new_position) < min_dist
-          end
-
-          next if collision
+          u.id != unit.id &&
+            (u.x - new_position.x).abs < min_dist &&
+            (u.y - new_position.y).abs < min_dist &&
+            u.distance_to_unit(new_position) < min_dist
         end
+
+        next if collision
 
         unit.x = new_position.x
         unit.y = new_position.y
