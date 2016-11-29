@@ -2,17 +2,28 @@ module AiBot
   class Strategy
     attr_accessor :me, :world, :game, :move
 
-    def move!
-      m = best_move
+    def initialize
+      @positions = []
+    end
 
+    def move!
+      refresh_positions
+
+      m = best_move
       move.speed = m.speed
       move.turn = m.turn
 
-      #print '|'
       #puts "#{world.tick_index} speed: #{move.speed}, angle: #{move.turn}"
     end
 
     private
+
+    def refresh_positions
+      @positions << Point.new(me.x, me.y)
+      while @positions.size > 100
+        @positions.shift
+      end
+    end
 
     def best_move
       ai_world = AiBot::World.init_from(world)
@@ -43,7 +54,6 @@ module AiBot
       w = ai_world.clone
 
       moves.each do |m|
-        #print 'm'
         w.tick! me.id => m
       end
 
@@ -68,11 +78,13 @@ module AiBot
       ].min
 
       min_dist_to_unit = ai_world.units.reject { |u| u.id == wizard.id }.map { |u| wizard.distance_to_unit(u) - u.radius - wizard.radius }.min
-      collision_penalty = min_dist_to_unit < wizard.radius * 4 ? -wizard.radius / [min_dist_to_unit, 0.00001].max : 0
+      collision_penalty = min_dist_to_unit < wizard.radius ? -wizard.radius / [min_dist_to_unit, 0.00001].max : 0
 
-      #puts "#{edges}, #{corners}, #{collision_penalty}"
+      new_places = @positions.map do |position|
+        wizard.distance_to_unit position
+      end.inject(&:+)
 
-      edges + corners * 2 + 100 * collision_penalty
+      0.1 * edges + 0.1 * corners + 100 * collision_penalty + 0.01 * new_places
     end
 
   end
