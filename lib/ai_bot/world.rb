@@ -75,6 +75,10 @@ module AiBot
         end
 
         next if collision
+        next if new_position.x < unit.radius
+        next if new_position.y < unit.radius
+        next if new_position.x > width - unit.radius
+        next if new_position.y > height - unit.radius
 
         unit.x = new_position.x
         unit.y = new_position.y

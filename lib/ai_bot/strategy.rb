@@ -78,13 +78,19 @@ module AiBot
       ].min
 
       min_dist_to_unit = ai_world.units.reject { |u| u.id == wizard.id }.map { |u| wizard.distance_to_unit(u) - u.radius - wizard.radius }.min
-      collision_penalty = min_dist_to_unit < wizard.radius ? -wizard.radius / [min_dist_to_unit, 0.00001].max : 0
+      collision_penalty = begin
+                            if min_dist_to_unit < wizard.radius * 4 
+                              -wizard.radius / [min_dist_to_unit, 0.00001].max ** 2
+                            else
+                              0
+                            end
+                          end
 
       new_places = @positions.map do |position|
         wizard.distance_to_unit position
       end.inject(&:+)
 
-      0.1 * edges + 0.1 * corners + 100 * collision_penalty + 0.01 * new_places
+      1 * edges + 1 * corners + 100 * collision_penalty + 0.01 * new_places
     end
 
   end
