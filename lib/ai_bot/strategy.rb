@@ -38,6 +38,8 @@ module AiBot
     def best_move
       ai_world = AiBot::World.init_from(world)
 
+      ai_world2 = AiBot::WorldState.new(units: (world.trees + world.minions + world.wizards + world.buildings - [me]))
+
       generate_moves.repeated_combination(PATH_SIZE).reject{ |moves| reject_move_sequence?(moves) }.sort_by do |moves|
         -evalution_func(simulate(ai_world, moves))
       end.first.first
