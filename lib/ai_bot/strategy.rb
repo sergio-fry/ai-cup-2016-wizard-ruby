@@ -16,10 +16,17 @@ module AiBot
       move.speed = m.speed
       move.turn = m.turn
 
-      #puts "#{world.tick_index} speed: #{move.speed}, angle: #{move.turn}"
+      debug
+
     end
 
     private
+
+    def debug
+      return unless ENV['DEBUG']
+
+      puts "#{world.tick_index}, me: (#{me.x},#{me.y}) speed: #{move.speed}, angle: #{move.turn}"
+    end
 
     def refresh_positions
       @positions << Point.new(me.x, me.y)
