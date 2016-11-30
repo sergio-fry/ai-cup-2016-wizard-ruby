@@ -66,7 +66,7 @@ module AiBot
         new_position = Point.new(unit.x + unit.speed_x, unit.y + unit.speed_y)
 
         collision = units.any? do |u|
-          min_dist = (u.radius + unit.radius) + 10
+          min_dist = (u.radius + unit.radius) + 1
 
           u.id != unit.id &&
             (u.x - new_position.x).abs < min_dist &&
