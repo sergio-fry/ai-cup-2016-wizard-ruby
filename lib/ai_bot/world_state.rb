@@ -1,9 +1,13 @@
 module AiBot
   class WorldState
-    def initialize(previous: nil, units: [], tick: 0)
+    attr_reader :tick, :width, :height
+
+    def initialize(previous: nil, units: [], tick: 0, width: 4000, height: 4000)
       @previous = previous
       @next = nil
       @tick = tick
+      @width = width
+      @height = height
 
       @moving_units = units.find_all { |u| (u.speed_x.abs + u.speed_y.abs) > 0 }
       @standing_units = units - @moving_units
@@ -20,13 +24,11 @@ module AiBot
     end
 
     def apply_move(unit, move)
-      unit_new = unit.clone
+      apply_move_speed unit, move
+      apply_move_turn unit, move
+      update_position unit, detect_collision: true
 
-      apply_move_speed unit_new, move
-      apply_move_turn unit_new, move
-      update_position unit_new, detect_collision: true
-
-      unit_new
+      unit
     end
 
     def unit_by_id(id)
@@ -73,16 +75,16 @@ module AiBot
             u.distance_to_unit(new_position) < min_dist
         end
 
-        next if collision
+        return if collision
       end
 
-      next if new_position.x < unit.radius
-      next if new_position.y < unit.radius
-      next if new_position.x > width - unit.radius
-      next if new_position.y > height - unit.radius
+      return if new_position.x < unit.radius
+      return if new_position.y < unit.radius
+      return if new_position.x > width - unit.radius
+      return if new_position.y > height - unit.radius
 
-      new_unit.instance_variable_set(:'@x', unit.x + new_position.speed_x)
-      new_unit.instance_variable_set(:'@y', unit.y + new_position.speed_y)
+      unit.instance_variable_set(:'@x', unit.x + new_position.x)
+      unit.instance_variable_set(:'@y', unit.y + new_position.y)
     end
   end
 end

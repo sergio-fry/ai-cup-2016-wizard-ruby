@@ -36,13 +36,33 @@ module AiBot
     end
 
     def best_move
-      ai_world = AiBot::World.init_from(world)
+      world_states = generate_world_states
 
-      ai_world2 = AiBot::WorldState.new(units: (world.trees + world.minions + world.wizards + world.buildings - [me]))
+      best_moves = generate_moves.repeated_combination(PATH_SIZE).reject{ |moves| reject_move_sequence?(moves) }.sort_by do |moves|
 
-      generate_moves.repeated_combination(PATH_SIZE).reject{ |moves| reject_move_sequence?(moves) }.sort_by do |moves|
-        -evalution_func(simulate(ai_world, moves))
-      end.first.first
+        wizard = me.clone
+
+        moves.each_with_index do |move, i|
+          world_states[i].apply_move wizard, move
+        end
+
+        rating = evalution_func(world_states[PATH_SIZE], wizard)
+
+        rating
+      end.last
+
+      best_moves.first
+    end
+
+    def generate_world_states
+      states = {}
+      states[0] = AiBot::WorldState.new(units: (world.trees + world.minions + world.wizards + world.buildings - [me]), width: world.width, height: world.height, tick: world.tick_index)
+
+      (1..PATH_SIZE).each do |i|
+        states[i] = states[i-1].next
+      end
+
+      states
     end
 
     def reject_move_sequence?(moves)
@@ -72,8 +92,8 @@ module AiBot
       w
     end
 
-    def evalution_func(ai_world)
-      v = EvalutionFunction.new(ai_world, me, @positions).calc
+    def evalution_func(ai_world, wizard)
+      v = EvalutionFunction.new(ai_world, wizard, @positions).calc
 
       v
     end
