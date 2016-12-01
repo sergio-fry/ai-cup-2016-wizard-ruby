@@ -9,10 +9,13 @@ module AiBot
       @width = width
       @height = height
 
-      @moving_units = units.find_all { |u| (u.speed_x.abs + u.speed_y.abs) > 0 }
-      @standing_units = units - @moving_units
+      self.units = units
+    end
 
-      @units_hash = Hash[units.map { |unit| [unit.id, unit] }]
+    def units=(new_units)
+      @moving_units = new_units.find_all { |u| (u.speed_x.abs + u.speed_y.abs) > 0 }
+      @standing_units = new_units - @moving_units
+      @units_hash = Hash[new_units.map { |unit| [unit.id, unit] }]
     end
 
     def units
@@ -43,7 +46,7 @@ module AiBot
       @moving_units.each do |unit|
         new_unit = unit.clone
 
-        update_position(unit, detect_collision: false)
+        update_position(new_unit, detect_collision: false)
 
         arr << new_unit
       end
@@ -52,14 +55,14 @@ module AiBot
     end
 
     def apply_move_speed(unit, move)
-      unit.instance_variable_set(:'@speed_x', move.speed * Math.cos(unit.angle))
-      unit.instance_variable_set(:'@speed_y', move.speed * Math.sin(unit.angle))
+      unit.speed_x = move.speed * Math.cos(unit.angle)
+      unit.speed_y = move.speed * Math.sin(unit.angle)
 
       unit
     end
 
     def apply_move_turn(unit, move)
-      unit.instance_variable_set :'@angle', Utils.normalize_angle(unit.angle + move.turn) 
+      unit.angle = Utils.normalize_angle(unit.angle + move.turn)
     end
 
     def update_position(unit, detect_collision: false)
@@ -82,9 +85,10 @@ module AiBot
       return if new_position.y < unit.radius
       return if new_position.x > width - unit.radius
       return if new_position.y > height - unit.radius
+      
 
-      unit.instance_variable_set(:'@x', unit.x + new_position.x)
-      unit.instance_variable_set(:'@y', unit.y + new_position.y)
+      unit.x = new_position.x
+      unit.y = new_position.y
     end
   end
 end

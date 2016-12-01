@@ -3,3 +3,5 @@ module AiBot
     attr_accessor :x, :y, :speed_x, :speed_y, :angle
   end
 end
+
+Unit.include AiBot::Unit

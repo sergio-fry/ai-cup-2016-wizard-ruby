@@ -33,8 +33,8 @@ end
 def wizard_attrs(overrides={})
   defaults = {
     id: 1,
-    x: 400,
-    y: 400,
+    x: 800,
+    y: 800,
     speed_x: 0,
     speed_y: 0,
     angle: 0, # parallel O->X
