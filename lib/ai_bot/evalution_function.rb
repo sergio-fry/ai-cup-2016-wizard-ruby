@@ -9,18 +9,17 @@ module AiBot
     end
 
     def calc
-      close_units = world.units
-        .find_all { |u| wizard.distance_to_unit(u) < 300 }
-
-      collision_score = close_units.map { |u| distance_score(u) }.inject(&:+) || 0
-
-
-      stop_penalty = positions.last.distance_to(wizard) <= 0.1 ? 1 : 0
-
-      -1 * edges_score - 1 * collision_score + 0.0001 * new_places_score # - 100 * stop_penalty
+      -1 * edges_score - 1 * collision_score + 0.0001 * new_places_score
     end
 
     private
+
+    def collision_score
+      close_units = world.units
+        .find_all { |u| wizard.distance_to_unit(u) < 300 }
+
+      close_units.map { |u| distance_score(u) }.inject(&:+) || 0
+    end
 
     def new_places_score
       return 0 if positions.size == 0
