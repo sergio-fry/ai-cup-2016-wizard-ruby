@@ -4,12 +4,12 @@ module AiBot
 
     def initialize(world, wizard, positions)
       @world = world
-      @wizard = @world.unit_by_id wizard.id
+      @wizard = wizard
       @positions = positions
     end
 
     def calc
-      close_units = world.units.reject { |u| u.id == wizard.id }
+      close_units = world.units
         .find_all { |u| wizard.distance_to_unit(u) < 300 }
 
       collision_score = close_units.map { |u| distance_score(u) }.inject(&:+) || 0

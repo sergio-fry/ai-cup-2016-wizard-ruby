@@ -25,7 +25,7 @@ module AiBot
     def debug
       return unless ENV['DEBUG']
 
-      puts "#{world.tick_index}, me: (#{me.x},#{me.y}) speed: #{move.speed}, angle: #{move.turn}"
+      #puts "#{world.tick_index}, me: (#{me.x},#{me.y}) speed: #{move.speed}, angle: #{move.turn}"
     end
 
     def refresh_positions
@@ -80,16 +80,6 @@ module AiBot
           m
         end
       end.flatten
-    end
-
-    def simulate(ai_world, moves)
-      w = ai_world.clone
-
-      moves.each do |m|
-        w.tick! me.id => m
-      end
-
-      w
     end
 
     def evalution_func(ai_world, wizard)
