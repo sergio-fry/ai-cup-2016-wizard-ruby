@@ -136,5 +136,19 @@ describe AiBot::WorldState do
     expect(me.y).to eq 3698
   end
 
-  it 'should limit speed'
+  it 'should limit speed' do
+    me.angle = -1.5707963267948965
+    me.x = 100
+    me.y = 3700
+
+    move = Move.new
+    move.turn = 0.1
+    move.speed = 3
+    move.strafe_speed = 3
+
+    world.apply_move(me, move)
+
+    expect(me.x).to eq 102.4
+    expect(me.y).to eq 3697.6
+  end
 end

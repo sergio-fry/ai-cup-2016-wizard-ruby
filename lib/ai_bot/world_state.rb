@@ -65,7 +65,8 @@ module AiBot
       a = Math.sqrt((speed / max_speed) ** 2 + (strafe_speed / max_strafe_speed))
 
       if a > 1
-
+        speed /= a
+        strafe_speed /= a
       end
 
       unit.speed_x = speed * Math.cos(unit.angle) - strafe_speed * Math.sin(unit.angle)
