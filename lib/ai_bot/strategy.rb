@@ -3,7 +3,7 @@ module AiBot
     attr_accessor :me, :world, :game, :move
 
     TRACE_SIZE = 500
-    PATH_SIZE = 2
+    PATH_SIZE = 3
 
     def initialize
       @positions = []
