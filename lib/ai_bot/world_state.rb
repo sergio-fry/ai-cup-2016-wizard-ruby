@@ -1,6 +1,6 @@
 module AiBot
   class WorldState
-    attr_reader :tick, :width, :height
+    attr_reader :tick, :width, :height, :game
 
     def initialize(previous: nil, units: [], tick: 0, width: 4000, height: 4000, game: )
       @previous = previous
@@ -63,7 +63,13 @@ module AiBot
     end
 
     def apply_move_turn(unit, move)
-      unit.angle = Utils.normalize_angle(unit.angle + move.turn)
+      turn = Utils.normalize_angle move.turn
+
+      if turn.abs > game.wizard_max_turn_angle
+        turn = (turn / turn) * game.wizard_max_turn_angle
+      end
+
+      unit.angle = Utils.normalize_angle(unit.angle + turn)
     end
 
     def update_position(unit, detect_collision: false)

@@ -94,6 +94,17 @@ describe AiBot::WorldState do
     expect(me.distance_to_unit(tree) >= (me.radius + tree.radius)).to eq true
   end
 
-  it 'should limit turn angle'
+  it 'should limit turn angle' do
+    me.angle = 0
+
+    move = Move.new
+    move.turn = Math::PI / 2
+
+    world.apply_move(me, move)
+
+    expect(me.angle.abs > 0).to eq true
+    expect(me.angle.abs < 0.105).to eq true
+  end
+
   it 'should limit speed'
 end
