@@ -106,5 +106,35 @@ describe AiBot::WorldState do
     expect(me.angle.abs < 0.105).to eq true
   end
 
+  it 'should use strafe' do
+    me.angle = 0
+    me.x = 400
+    me.y = 400
+
+    move = Move.new
+    move.strafe_speed = 3
+
+    world.apply_move(me, move)
+
+    expect(me.x).to eq 400
+    expect(me.y).to eq 403
+  end
+
+  it 'should use strafe' do
+    me.angle = -1.5707963267948965
+    me.x = 100
+    me.y = 3700
+
+    move = Move.new
+    move.turn = 0.1
+    move.speed = 2
+    move.strafe_speed = 1
+
+    world.apply_move(me, move)
+
+    expect(me.x).to eq 101
+    expect(me.y).to eq 3698
+  end
+
   it 'should limit speed'
 end

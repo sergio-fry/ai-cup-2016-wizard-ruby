@@ -1,6 +1,8 @@
 module AiBot
   module Utils
     def normalize_angle(angle)
+      return 0 if angle == 0
+
       sign = angle / angle.abs
 
       while angle.abs > Math::PI

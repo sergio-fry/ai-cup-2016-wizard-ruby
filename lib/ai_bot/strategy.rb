@@ -28,7 +28,7 @@ module AiBot
     end
 
     def debug
-      puts "#{world.tick_index}, me: (#{me.x},#{me.y}) speed: #{move.speed}, angle: #{move.turn}"
+      puts "#{world.tick_index}, me: (#{me.x},#{me.y}), angle: #{me.angle} speed: #{move.speed}, angle: #{move.turn}"
     end
 
     def refresh_positions

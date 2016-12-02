@@ -56,8 +56,20 @@ module AiBot
     end
 
     def apply_move_speed(unit, move)
-      unit.speed_x = move.speed * Math.cos(unit.angle)
-      unit.speed_y = move.speed * Math.sin(unit.angle)
+      speed = move.speed
+      strafe_speed = move.strafe_speed
+
+      max_speed = speed > 0 ? game.wizard_forward_speed : game.wizard_backward_speed
+      max_strafe_speed = game.wizard_strafe_speed
+
+      a = Math.sqrt((speed / max_speed) ** 2 + (strafe_speed / max_strafe_speed))
+
+      if a > 1
+
+      end
+
+      unit.speed_x = speed * Math.cos(unit.angle) - strafe_speed * Math.sin(unit.angle)
+      unit.speed_y = speed * Math.sin(unit.angle) + strafe_speed * Math.cos(unit.angle)
 
       unit
     end
