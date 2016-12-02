@@ -2,7 +2,7 @@ module AiBot
   class Strategy
     attr_accessor :me, :world, :game, :move
 
-    TRACE_SIZE = 500
+    TRACE_SIZE = 100
     PATH_SIZE = 3
 
     def initialize
@@ -16,20 +16,18 @@ module AiBot
       move.speed = m.speed
       move.turn = m.turn
 
-      debug
-
+      debug if ENV['DEBUG']
     end
 
     private
 
     def debug
-      return unless ENV['DEBUG']
-
-      #puts "#{world.tick_index}, me: (#{me.x},#{me.y}) speed: #{move.speed}, angle: #{move.turn}"
+      puts "#{world.tick_index}, me: (#{me.x},#{me.y}) speed: #{move.speed}, angle: #{move.turn}"
     end
 
     def refresh_positions
       @positions << Point.new(me.x, me.y)
+
       while @positions.size > TRACE_SIZE
         @positions.shift
       end
@@ -83,7 +81,7 @@ module AiBot
     end
 
     def evalution_func(ai_world, wizard)
-      v = EvalutionFunction.new(ai_world, wizard, @positions).calc
+      v = EvalutionFunction.new(world: ai_world, wizard: wizard, positions: @positions, game: game).calc
 
       v
     end

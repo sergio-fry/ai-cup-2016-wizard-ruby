@@ -18,7 +18,7 @@
 # See http://rubydoc.info/gems/rspec-core/RSpec/Core/Configuration
 
 Dir.glob(File.join(File.dirname(__FILE__), '../model/*.rb')) { |f|  require_relative f }
-Dir.glob(File.join(File.dirname(__FILE__), '../lib/ai_bot/*.rb')) { |f|  require_relative f }
+Dir.glob(File.join(File.dirname(__FILE__), '../lib/ai_bot/**/*.rb')) { |f|  require_relative f }
 Dir.glob(File.join(File.dirname(__FILE__), 'support/**/*.rb')) { |f|  require_relative f }
 
 RSpec.configure do |config|
