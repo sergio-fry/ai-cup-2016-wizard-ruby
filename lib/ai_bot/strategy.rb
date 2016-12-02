@@ -21,6 +21,12 @@ module AiBot
 
     private
 
+    def current_target
+      (world.wizards + world.buildings + world.minions).flatten.find_all do |unit|
+        unit.enemy_to? me
+      end.sort_by { |u| u.distance_to_unit(me) }.first
+    end
+
     def debug
       puts "#{world.tick_index}, me: (#{me.x},#{me.y}) speed: #{move.speed}, angle: #{move.turn}"
     end
@@ -54,7 +60,7 @@ module AiBot
 
     def generate_world_states
       states = {}
-      states[0] = AiBot::WorldState.new(units: (world.trees + world.minions + world.wizards + world.buildings - [me]), width: world.width, height: world.height, tick: world.tick_index)
+      states[0] = AiBot::WorldState.new(units: (world.trees + world.minions + world.wizards + world.buildings - [me]), width: world.width, height: world.height, tick: world.tick_index, game: game)
 
       (1..PATH_SIZE).each do |i|
         states[i] = states[i-1].next
@@ -81,7 +87,7 @@ module AiBot
     end
 
     def evalution_func(ai_world, wizard)
-      v = EvalutionFunction.new(world: ai_world, wizard: wizard, positions: @positions, game: game).calc
+      v = EvalutionFunction.new(world: ai_world, wizard: wizard, positions: @positions, game: game, current_target: current_target).calc
 
       v
     end

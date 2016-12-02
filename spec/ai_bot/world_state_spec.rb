@@ -8,8 +8,10 @@ describe AiBot::WorldState do
   let(:units) { [tree, wizard] }
 
   let(:world) do
-    AiBot::WorldState.new(units: units)
+    AiBot::WorldState.new(units: units, game: game)
   end
+
+  let(:game) { Game.new(*game_attrs) }
 
   let(:epsilon) { 0.01 }
   let(:tree) { Tree.new(*tree_attrs) }

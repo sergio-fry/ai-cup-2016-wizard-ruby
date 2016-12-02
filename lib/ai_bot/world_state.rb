@@ -2,12 +2,13 @@ module AiBot
   class WorldState
     attr_reader :tick, :width, :height
 
-    def initialize(previous: nil, units: [], tick: 0, width: 4000, height: 4000)
+    def initialize(previous: nil, units: [], tick: 0, width: 4000, height: 4000, game: )
       @previous = previous
       @next = nil
       @tick = tick
       @width = width
       @height = height
+      @game = game
 
       self.units = units
     end
@@ -23,7 +24,7 @@ module AiBot
     end
 
     def next
-      @next ||= self.class.new(previous: self, units: @standing_units + moved_units_on_next_tick, tick: @tick + 1)
+      @next ||= self.class.new(previous: self, units: @standing_units + moved_units_on_next_tick, tick: @tick + 1, game: @game)
     end
 
     def apply_move(unit, move)
