@@ -1,5 +1,7 @@
 module AiBot
   class EvalutionFunction
+    MAX_EDGE_DIST = 100
+
     attr_reader :world, :wizard, :positions
 
     def initialize(world, wizard, positions)
@@ -30,21 +32,21 @@ module AiBot
     end
 
     def edges_score
-      d = [
-        wizard.x,
-        wizard.y,
-        world.width - wizard.x,
-        world.height - wizard.y
-      ].min
-
-      return 0 if d > 100
-
-      (d < 1) ? 1000 : 1 / d ** 2
+      [
+        Point.new(wizard.x, 0),
+        Point.new(0, wizard.y),
+        Point.new(world.width - wizard.x, 0),
+        Point.new(0, world.height - wizard.y),
+      ].map do |projection|
+        distance_score(projection, max_distance: MAX_EDGE_DIST)
+      end.inject(&:+)
     end
 
-    def distance_score(unit, max_distance=nil)
+    def distance_score(unit, max_distance: nil)
       r = unit.respond_to?(:radius) ? unit.radius : 0
       d = (wizard.distance_to_unit(unit) - r - wizard.radius)
+
+      return 0 if d > max_distance unless max_distance.nil?
 
       (d < 1) ? 1000 : 1 / d ** 2
     end
