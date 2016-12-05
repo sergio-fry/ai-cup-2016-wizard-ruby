@@ -14,6 +14,7 @@ module AiBot
 
       m = best_move
       move.speed = m.speed
+      move.strafe_speed = m.strafe_speed
       move.turn = m.turn
 
       debug if ENV['DEBUG']
@@ -28,7 +29,7 @@ module AiBot
     end
 
     def debug
-      puts "#{world.tick_index}, me: (#{me.x},#{me.y}), angle: #{me.angle} speed: #{move.speed}, angle: #{move.turn}"
+      puts "#{world.tick_index} me:(x:#{me.x},y:#{me.y},a:#{me.angle}) move:(s:#{move.speed},st:#{move.strafe_speed},t:#{move.turn})"
     end
 
     def refresh_positions
@@ -42,8 +43,7 @@ module AiBot
     def best_move
       world_states = generate_world_states
 
-      best_moves = generate_moves.repeated_combination(PATH_SIZE).reject{ |moves| reject_move_sequence?(moves) }.sort_by do |moves|
-
+      best_moves = generate_moves.sort_by do |moves|
         wizard = me.clone
 
         moves.each_with_index do |move, i|
@@ -69,21 +69,8 @@ module AiBot
       states
     end
 
-    def reject_move_sequence?(moves)
-      moves.any? { |m| m.speed != moves.first.speed } ||
-        (0..moves.size-2).any? { |i| moves[i].turn * moves[i+1].turn < 0 }
-    end
-
     def generate_moves
-      [ 0, game.wizard_max_turn_angle, -game.wizard_max_turn_angle ].map do |angle|
-        [-3, 0, 4].map do |speed|
-          m = Move.new
-          m.speed = speed
-          m.turn = angle
-
-          m
-        end
-      end.flatten
+      TrackGenerator.new(depth: 3).generate
     end
 
     def evalution_func(ai_world, wizard)

@@ -62,7 +62,7 @@ module AiBot
       max_speed = speed > 0 ? game.wizard_forward_speed : game.wizard_backward_speed
       max_strafe_speed = game.wizard_strafe_speed
 
-      a = Math.sqrt((speed / max_speed) ** 2 + (strafe_speed / max_strafe_speed))
+      a = Math.sqrt((speed / max_speed) ** 2 + (strafe_speed / max_strafe_speed) ** 2)
 
       if a > 1
         speed /= a
