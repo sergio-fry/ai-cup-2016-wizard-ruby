@@ -3,7 +3,7 @@ module AiBot
     attr_accessor :me, :world, :game, :move
 
     TRACE_SIZE = 100
-    PATH_SIZE = 3
+    PATH_SIZE = 5
 
     def initialize
       @positions = []
@@ -70,7 +70,7 @@ module AiBot
     end
 
     def generate_moves
-      TrackGenerator.new(depth: 3).generate
+      TrackGenerator.new(depth: PATH_SIZE).generate
     end
 
     def evalution_func(ai_world, wizard)
