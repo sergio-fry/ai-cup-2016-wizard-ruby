@@ -41,10 +41,12 @@ module AiBot
       cell_size = radius.to_f * 2 / size
 
       empty_cells = {}
+      x0 = center.x - radius
+      y0 = center.y - radius
 
       size.times do |x|
         size.times do |y|
-          empty_cells[[x, y]] = Point.new(x * cell_size + cell_size / 2, y * cell_size + cell_size / 2)
+          empty_cells[[x, y]] = Point.new(x0 + x * cell_size + cell_size / 2, y0 + y * cell_size + cell_size / 2)
         end
       end
 
