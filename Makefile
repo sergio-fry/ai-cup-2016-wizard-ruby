@@ -72,3 +72,4 @@ compare:
 build:
 	cat my_strategy_header.rb > my_strategy.rb
 	cat lib/ai_bot/*.rb >> my_strategy.rb
+	cat lib/ai_bot/strategy/*.rb >> my_strategy.rb

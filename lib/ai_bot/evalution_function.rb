@@ -1,12 +1,13 @@
 module AiBot
   class EvalutionFunction
     MAX_EDGE_DIST = 100
+    MAX_CORNER_DIST = 300
 
     EDGE_SCORE = -1
+    CORNER_SCORE = -2
     COLLISION_SCORE = -1
-    NEW_PLACES_SCORE = 0.0001
     SAFE_DISTANCE_FROM_ENEMY_SCORE = -10
-    LOOK_AT_TARGET_SCORE = 2
+    LOOK_AT_TARGET_SCORE = 0
 
     attr_reader :world, :wizard, :positions, :game, :current_target
 
@@ -20,8 +21,8 @@ module AiBot
 
     def calc
       EDGE_SCORE * edges_score +
+        CORNER_SCORE * corner_score +
         COLLISION_SCORE * collision_score +
-        NEW_PLACES_SCORE * new_places_score +
         SAFE_DISTANCE_FROM_ENEMY_SCORE * keep_safe_distance_score + 
         LOOK_AT_TARGET_SCORE * look_at_target_score
     end
@@ -36,12 +37,24 @@ module AiBot
       angle == 0 ? 1000 : 1.0 / angle.abs
     end
 
-    def keep_safe_distance_score
-      return 0 if enemies.empty?
+    def closest_enemy
+      enemies.sort_by do |unit|
+        wizard.distance_to_unit(unit)
+      end.first
+    end
 
-      enemies.map do |unit|
-        distance_score(unit, max_distance: Utils.safe_distance_from(game: game, unit: unit, wizard: wizard))
-      end.inject(&:+)
+    def keep_safe_distance_score
+      return 0 if closest_enemy.nil?
+
+      dist = closest_enemy.distance_to_unit wizard
+      safe_distance = Utils.safe_distance_from(game: game, unit: closest_enemy, wizard: wizard)
+
+      v = safe_distance - dist
+
+      v = [0, v].max
+      v = [safe_distance, v].min
+
+      v + 50
     end
 
     def enemies(klass=LivingUnit)
@@ -59,14 +72,6 @@ module AiBot
       close_units.map { |u| distance_score(u) }.inject(&:+) || 0
     end
 
-    def new_places_score
-      return 0 if positions.size == 0
-
-      new_places = positions.map do |position|
-        wizard.distance_to_unit position
-      end.inject(&:+) / positions.size
-    end
-
     def edges_score
       [
         Point.new(wizard.x, 0),
@@ -78,13 +83,24 @@ module AiBot
       end.inject(&:+)
     end
 
+    def corner_score
+      [
+        Point.new(0, 0),
+        Point.new(0, world.height),
+        Point.new(world.width, 0),
+        Point.new(world.width, world.height),
+      ].map do |projection|
+        distance_score(projection, max_distance: MAX_CORNER_DIST)
+      end.inject(&:+)
+    end
+
     def distance_score(unit, max_distance: nil)
       r = unit.respond_to?(:radius) ? unit.radius : 0
       d = (wizard.distance_to_unit(unit) - r - wizard.radius)
 
       return 0 if d > max_distance unless max_distance.nil?
 
-      (d < 1) ? 1000 : 1 / d ** 2
+      (d < 1) ? 999999 : 1 / d ** 2
     end
   end
 end

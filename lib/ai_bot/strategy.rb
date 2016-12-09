@@ -55,7 +55,11 @@ module AiBot
         rating
       end.last
 
-      best_moves.first
+      best = best_moves.first
+
+      best.turn = me.angle_to_unit(current_target) if current_target
+
+      best
     end
 
     def generate_world_states
@@ -74,7 +78,7 @@ module AiBot
     end
 
     def evalution_func(ai_world, wizard)
-      v = EvalutionFunction.new(world: ai_world, wizard: wizard, positions: @positions, game: game, current_target: current_target).calc
+      v = EvalutionFunctionTop.new(world: ai_world, wizard: wizard, positions: @positions, game: game, current_target: current_target).calc
 
       v
     end
