@@ -10,15 +10,15 @@ describe AiBot::Grid do
     ]
   end
 
+  let(:target_grid) do
+    build_grid <<-GRID
+      1 0 0
+      0 0 0
+      0 0 0
+    GRID
+  end
+
   it 'should build grid' do
-    expect(grid.node_at(0, 0)).to eq nil # filled by tree
-    expect(grid.node_at(0, 1)).to be_a AiBot::Point
-    expect(grid.node_at(0, 2)).to be_a AiBot::Point
-    expect(grid.node_at(1, 0)).to be_a AiBot::Point
-    expect(grid.node_at(1, 1)).to be_a AiBot::Point
-    expect(grid.node_at(1, 2)).to be_a AiBot::Point
-    expect(grid.node_at(2, 0)).to be_a AiBot::Point
-    expect(grid.node_at(2, 1)).to be_a AiBot::Point
-    expect(grid.node_at(2, 2)).to be_a AiBot::Point
+    expect(grid.nodes).to eq target_grid.nodes
   end
 end

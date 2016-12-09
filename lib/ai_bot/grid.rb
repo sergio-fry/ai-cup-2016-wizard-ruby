@@ -1,5 +1,7 @@
 module AiBot
   class Grid
+    attr_reader :nodes
+
     def initialize
       @nodes = {}
     end
@@ -20,6 +22,14 @@ module AiBot
         node_at(node.x + 1, node.y),
         node_at(node.x, node.y + 1)
       ].compact
+    end
+
+    def width
+      @node.size
+    end
+
+    def height
+      @node.first.size
     end
 
     MATRIX_SIZE = 10
