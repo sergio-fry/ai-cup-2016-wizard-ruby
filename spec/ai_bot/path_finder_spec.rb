@@ -1,41 +1,5 @@
 require 'spec_helper'
 
-class Grid
-  def initialize
-    @nodes = {}
-  end
-
-  def node_at(x, y)
-    @nodes.dig(x.to_i, y.to_i)
-  end
-
-  def add_node(node)
-    @nodes[node.x.to_i] ||= {}
-    @nodes[node.x.to_i][node.y.to_i] = node
-  end
-
-  def neighbors_for(node)
-    [
-      node_at(node.x - 1, node.y),
-      node_at(node.x, node.y - 1),
-      node_at(node.x + 1, node.y),
-      node_at(node.x, node.y + 1)
-    ].compact
-  end
-end
-
-def build_grid(input)
-  new_grid = Grid.new
-
-  input.split("\n").each_with_index do |line, y|
-    line.split.each_with_index do |node, x|
-      new_grid.add_node AiBot::Point.new(x, y) if node == '0'
-    end
-  end
-
-  new_grid
-end
-
 describe AiBot::PathFinder do
   let(:path_finder) { AiBot::PathFinder.new grid: grid }
 
