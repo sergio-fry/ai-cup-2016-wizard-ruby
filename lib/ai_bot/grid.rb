@@ -1,9 +1,10 @@
 module AiBot
   class Grid
-    attr_reader :nodes
+    attr_reader :nodes, :size
 
-    def initialize
+    def initialize(size:)
       @nodes = {}
+      @size = size
     end
 
     def node_at(x, y)
@@ -24,19 +25,17 @@ module AiBot
       ].compact
     end
 
-    def width
-      @node.size
-    end
-
-    def height
-      @node.first.size
+    def to_s
+      (0..size - 1).to_a.map do |y|
+        (0..size - 1).to_a.map { |x| node_at(x, y).nil? ? 1 : 0 }.join(' ')
+      end.join("\n")
     end
 
     MATRIX_SIZE = 10
     WIZARD_VISION_RANGE = 600
 
     def self.build(units:, center:, radius: WIZARD_VISION_RANGE, size: MATRIX_SIZE)
-      grid = Grid.new
+      grid = Grid.new size: size
 
       cell_size = radius.to_f * 2 / size
 

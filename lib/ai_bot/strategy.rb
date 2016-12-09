@@ -12,6 +12,26 @@ module AiBot
     def move!
       refresh_positions
 
+      grid = Grid.build(units: units, center: me, radius: game.wizard_vision_range, size: 15)
+
+      puts "me: #{me.x}, #{me.y}"
+      units.each do |unit|
+        puts "[#{unit.x}, #{unit.y}, #{unit.radius}],"
+      end
+
+
+      puts grid
+
+      path_finder = PathFinder.new grid: grid
+      path = path_finder.find(from: Point.new(6, 6), to: Point.new(7, 6))
+
+      puts path.inspect
+
+
+      ##############################
+
+      return
+
       m = best_move
       move.speed = m.speed
       move.strafe_speed = m.strafe_speed
@@ -21,6 +41,10 @@ module AiBot
     end
 
     private
+
+    def units
+      (world.wizards + world.buildings + world.minions - [me])
+    end
 
     def current_target
       (world.wizards + world.buildings + world.minions).flatten.find_all do |unit|

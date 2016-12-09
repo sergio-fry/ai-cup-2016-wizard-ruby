@@ -1,5 +1,7 @@
 def build_grid(input)
-  new_grid = AiBot::Grid.new
+  size = input.split("\n").first.split.size
+
+  new_grid = AiBot::Grid.new size: size
 
   input.split("\n").each_with_index do |line, y|
     line.split.each_with_index do |node, x|
