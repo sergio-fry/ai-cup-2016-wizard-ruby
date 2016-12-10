@@ -9,6 +9,10 @@ module AiBot
     end
 
     def to_grid(x, y)
+      [(x - x0) / cell_size - 0.5, (y - y0) / cell_size - 0.5]
+    end
+
+    def from_grid(x, y)
       [x0 + x * cell_size + cell_size / 2, y0 + y * cell_size + cell_size / 2]
     end
   end

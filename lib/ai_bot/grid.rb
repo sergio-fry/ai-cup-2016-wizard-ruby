@@ -31,10 +31,7 @@ module AiBot
       end.join("\n")
     end
 
-    MATRIX_SIZE = 10
-    WIZARD_VISION_RANGE = 600
-
-    def self.build(units:, center:, radius: WIZARD_VISION_RANGE, size: MATRIX_SIZE)
+    def self.build(units:, center:, radius:, size:)
       grid = Grid.new size: size
       grid_mapper = GridMapper.new(center: center, radius: radius, size: size)
 
@@ -42,7 +39,7 @@ module AiBot
 
       size.times do |x|
         size.times do |y|
-          empty_cells[[x, y]] = Point.new(*grid_mapper.to_grid(x, y))
+          empty_cells[[x, y]] = Point.new(*grid_mapper.from_grid(x, y))
         end
       end
 
