@@ -5,9 +5,6 @@ module AiBot
     end
 
     def find(from:, to:)
-
-
-
       d = 0
       marks = {}
       marks[from] = 0

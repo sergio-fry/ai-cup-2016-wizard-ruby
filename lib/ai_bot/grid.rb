@@ -1,6 +1,7 @@
 module AiBot
   class Grid
     attr_reader :nodes, :size
+    attr_accessor :mapper
 
     def initialize(size:)
       @nodes = {}
@@ -9,6 +10,10 @@ module AiBot
 
     def node_at(x, y)
       @nodes.dig(x.to_i, y.to_i)
+    end
+
+    def node_mapped_from(x, y)
+      node_at *mapper.to_grid(x, y)
     end
 
     def add_node(node)
@@ -33,20 +38,20 @@ module AiBot
 
     def self.build(units:, center:, radius:, size:)
       grid = Grid.new size: size
-      grid_mapper = GridMapper.new(center: center, radius: radius, size: size)
+      grid.mapper = GridMapper.new(center: center, radius: radius, size: size)
 
       empty_cells = {}
 
       size.times do |x|
         size.times do |y|
-          empty_cells[[x, y]] = Point.new(*grid_mapper.from_grid(x, y))
+          empty_cells[[x, y]] = Point.new(*grid.mapper.from_grid(x, y))
         end
       end
 
       units.each do |unit|
         empty_cells.values.find_all do |cell|
-          (cell.x - unit.x).abs < grid_mapper.cell_size / 2 + unit.radius &&
-            (cell.y - unit.y).abs < grid_mapper.cell_size / 2 + unit.radius
+          (cell.x - unit.x).abs < grid.mapper.cell_size / 2 + unit.radius &&
+            (cell.y - unit.y).abs < grid.mapper.cell_size / 2 + unit.radius
         end.each do |cell|
           empty_cells.delete empty_cells.key(cell)
         end

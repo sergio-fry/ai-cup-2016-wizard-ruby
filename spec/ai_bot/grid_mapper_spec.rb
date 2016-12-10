@@ -6,8 +6,17 @@ describe AiBot::GridMapper do
 
   describe '#to_grid' do
     subject { grid_mapper.to_grid(*coords)}
-    let(:coords) { [150, 150] }
-    it { is_expected.to eq [0, 0] }
+
+    context do
+      let(:coords) { [150, 150] }
+      it { is_expected.to eq [0, 0] }
+    end
+
+    context do
+      let(:coords) { [160, 160] }
+      it { is_expected.to eq [0, 0] }
+    end
+
   end
 
   describe '#from_grid' do

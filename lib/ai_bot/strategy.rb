@@ -14,27 +14,32 @@ module AiBot
 
       grid = Grid.build(units: units, center: me, radius: game.wizard_vision_range, size: 15)
 
-
-      puts grid
-
       path_finder = PathFinder.new grid: grid
-      path = path_finder.find(from: grid.node_at(7, 7), to: grid.node_at(14, 3))
+      path = path_finder.find(from: grid.node_mapped_from(me.x, me.y), to: grid.node_mapped_from(600, 3200))
 
-      puts path.inspect
 
-      ##############################
+      next_point = path[1]
+      return if next_point.nil?
 
-      return
+      next_point_real = Point.new(*grid.mapper.from_grid(next_point.x, next_point.y))
 
-      m = best_move
-      move.speed = m.speed
-      move.strafe_speed = m.strafe_speed
-      move.turn = m.turn
+      puts next_point_real.inspect
+
+      move.speed, move.strafe_speed = dummy_go_to next_point_real
 
       debug if ENV['DEBUG']
     end
 
     private
+
+    MAX_SEED = 10
+
+    def dummy_go_to(point)
+      speed = MAX_SEED * Math::cos(me.angle_to_unit(point))
+      strafe_speed = MAX_SEED * Math::sin(me.angle_to_unit(point))
+
+      [speed, strafe_speed]
+    end
 
     def units
       (wizards + world.buildings + world.minions + world.trees)

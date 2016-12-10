@@ -38,4 +38,6 @@ describe AiBot::PathFinder do
       it { is_expected.to eq [[0, 1], [0, 2], [1, 2], [2, 2], [2, 1]] }
     end
   end
+
+  it 'should not fail if from is filled'
 end
