@@ -36,23 +36,20 @@ module AiBot
 
     def self.build(units:, center:, radius: WIZARD_VISION_RANGE, size: MATRIX_SIZE)
       grid = Grid.new size: size
-
-      cell_size = radius.to_f * 2 / size
+      grid_mapper = GridMapper.new(center: center, radius: radius, size: size)
 
       empty_cells = {}
-      x0 = center.x - radius
-      y0 = center.y - radius
 
       size.times do |x|
         size.times do |y|
-          empty_cells[[x, y]] = Point.new(x0 + x * cell_size + cell_size / 2, y0 + y * cell_size + cell_size / 2)
+          empty_cells[[x, y]] = Point.new(*grid_mapper.to_grid(x, y))
         end
       end
 
       units.each do |unit|
         empty_cells.values.find_all do |cell|
-          (cell.x - unit.x).abs < cell_size / 2 + unit.radius &&
-            (cell.y - unit.y).abs < cell_size / 2 + unit.radius
+          (cell.x - unit.x).abs < grid_mapper.cell_size / 2 + unit.radius &&
+            (cell.y - unit.y).abs < grid_mapper.cell_size / 2 + unit.radius
         end.each do |cell|
           empty_cells.delete empty_cells.key(cell)
         end

@@ -14,19 +14,13 @@ module AiBot
 
       grid = Grid.build(units: units, center: me, radius: game.wizard_vision_range, size: 15)
 
-      puts "me: #{me.x}, #{me.y}"
-      units.each do |unit|
-        puts "[#{unit.x}, #{unit.y}, #{unit.radius}],"
-      end
-
 
       puts grid
 
       path_finder = PathFinder.new grid: grid
-      path = path_finder.find(from: Point.new(6, 6), to: Point.new(7, 6))
+      path = path_finder.find(from: grid.node_at(7, 7), to: grid.node_at(14, 3))
 
       puts path.inspect
-
 
       ##############################
 
@@ -43,7 +37,11 @@ module AiBot
     private
 
     def units
-      (world.wizards + world.buildings + world.minions - [me])
+      (wizards + world.buildings + world.minions + world.trees)
+    end
+
+    def wizards
+      world.wizards.find_all { |w| w.id != me.id }
     end
 
     def current_target
