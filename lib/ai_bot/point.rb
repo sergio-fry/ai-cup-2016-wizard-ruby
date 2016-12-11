@@ -15,6 +15,7 @@ module AiBot
     end
 
     def ==(point2)
+      return false unless point2.is_a?(Point)
       self.x == point2.x && self.y == point2.y
     end
   end

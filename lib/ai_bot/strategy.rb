@@ -15,14 +15,15 @@ module AiBot
       grid = Grid.build(units: units, center: me, radius: game.wizard_vision_range, size: 15)
 
       path_finder = PathFinder.new grid: grid
-      path = path_finder.find(from: grid.mapper.to_grid(me.x, me.y), to: grid.mapper.to_grid(600, 3200))
+
+      best_node = find_best_node(grid)
+
+      path = path_finder.find(from: grid.mapper.to_grid(me.x, me.y), to: [best_node.x, best_node.y])
 
       next_point = path[1]
       return if next_point.nil?
 
       next_point_real = Point.new(*grid.mapper.from_grid(next_point.x, next_point.y))
-
-      puts next_point_real.inspect
 
       move.speed, move.strafe_speed = dummy_go_to next_point_real
 
@@ -30,6 +31,18 @@ module AiBot
     end
 
     private
+
+    def find_best_node(grid)
+      right_top_corner = Point.new(4000, 0)
+
+      puts '=' * 80
+      puts grid
+
+      grid.nodes_reachable_from(*grid.mapper.to_grid(me.x, me.y)).sort_by do |node|
+        point = Point.new *grid.mapper.from_grid(node.x, node.y)
+        point.distance_to right_top_corner
+      end.first
+    end
 
     MAX_SEED = 10
 

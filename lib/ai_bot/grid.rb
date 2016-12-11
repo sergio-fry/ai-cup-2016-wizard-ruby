@@ -8,6 +8,26 @@ module AiBot
       @size = size
     end
 
+    def all_nodes
+      nodes.values.map { |row| row.values }.flatten
+    end
+
+    def nodes_reachable_from(x, y)
+      start_node = node_at(x, y)
+      reachable = [start_node]
+
+      next_nodes = neighbors_for(start_node)
+
+      while true 
+        reachable.concat next_nodes
+
+        next_nodes = next_nodes.map { |node| neighbors_for(node) }.flatten - reachable
+        break if next_nodes.empty?
+      end
+      
+      reachable
+    end
+
     def node_at(x, y)
       @nodes.dig(x.to_i, y.to_i)
     end

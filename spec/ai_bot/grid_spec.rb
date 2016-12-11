@@ -65,6 +65,10 @@ describe AiBot::Grid do
     it 'should build grid' do
       expect(grid.nodes).to eq target_grid.nodes
     end
+
+    describe '#all_nodes' do
+      it { expect(grid.all_nodes.size).to eq 7 }
+    end
   end
 
   context 'sample 3' do
@@ -104,5 +108,24 @@ describe AiBot::Grid do
     it 'should build grid' do
       expect(grid.nodes).to eq target_grid.nodes
     end
+  end
+
+  describe '#nodes_reachable_from' do
+    subject { grid.nodes_reachable_from *point }
+    let(:grid) do
+      build_grid <<-GRID
+        0 0 0
+        1 1 1
+        0 0 0
+      GRID
+    end
+    let(:point) { [0, 0] }
+
+    let(:target) do
+      [grid.node_at(0, 0), grid.node_at(1, 0), grid.node_at(2, 0)]
+    end
+
+    it { expect(subject.size).to eq 3 }
+    it { expect(subject - target).to be_empty }
   end
 end
