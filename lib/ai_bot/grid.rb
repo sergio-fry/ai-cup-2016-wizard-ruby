@@ -14,6 +14,12 @@ module AiBot
 
     def nodes_reachable_from(x, y)
       start_node = node_at(x, y)
+
+      if start_node.nil?
+        start_node = Point.new(x, y)
+        add_node start_node
+      end
+
       reachable = [start_node]
 
       next_nodes = neighbors_for(start_node)

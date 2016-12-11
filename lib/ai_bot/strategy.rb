@@ -33,15 +33,24 @@ module AiBot
     private
 
     def find_best_node(grid)
-      right_top_corner = Point.new(4000, 0)
+      target = Point.new(400, 400)
 
-      puts '=' * 80
-      puts grid
+      #puts '=' * 80
+      #puts grid
 
       grid.nodes_reachable_from(*grid.mapper.to_grid(me.x, me.y)).sort_by do |node|
         point = Point.new *grid.mapper.from_grid(node.x, node.y)
-        point.distance_to right_top_corner
+
+        if current_target.nil?
+          point.distance_to target
+        else
+          (point.distance_to(current_target) - game.wizard_vision_range).abs
+        end
       end.first
+    end
+
+    def enemies
+      units.find_all { |u| enemy_to? me }
     end
 
     MAX_SEED = 10
