@@ -48,6 +48,14 @@ module AiBot
         end
       end
 
+      # remove out of range
+      empty_cells.values.each do |cell|
+        if cell.x < 0 || cell.y < 0 || cell.x > 4000 || cell.y > 4000
+          empty_cells.delete empty_cells.key(cell)
+        end
+      end
+
+      # remove filled
       units.each do |unit|
         empty_cells.values.find_all do |cell|
           (cell.x - unit.x).abs < grid.mapper.cell_size / 2 + unit.radius &&
@@ -57,6 +65,7 @@ module AiBot
         end
       end
 
+      # remove out of radius
       empty_cells.values.each do |cell|
         if cell.distance_to(center) > radius
           empty_cells.delete empty_cells.key(cell)

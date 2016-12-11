@@ -4,9 +4,9 @@ describe AiBot::Grid do
   let(:grid) { AiBot::Grid.build(units: units, center: center, size: size, radius: 450) }
   let(:center) { AiBot::Point.new(450, 450)}
   let(:size) { 3 }
+  let(:units) { [] }
 
   context 'empty' do
-    let(:units) { [] }
     let(:size) { 8 }
 
     let(:target_grid) do
@@ -82,6 +82,22 @@ describe AiBot::Grid do
         0 0 0
         1 0 0
         0 0 0
+      GRID
+    end
+
+    it 'should build grid' do
+      expect(grid.nodes).to eq target_grid.nodes
+    end
+  end
+
+  context 'out of range' do
+    let(:center) { AiBot::Point.new(150, 150)}
+
+    let(:target_grid) do
+      build_grid <<-GRID
+        1 1 1
+        1 0 0
+        1 0 0
       GRID
     end
 
