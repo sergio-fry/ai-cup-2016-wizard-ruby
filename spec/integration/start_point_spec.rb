@@ -27,6 +27,6 @@ describe 'Find path at start' do
 
   it 'should find a path' do
     path_finder = AiBot::PathFinder.new grid: grid
-    path = path_finder.find(from: grid.node_at(6, 6), to: grid.node_at(7, 6))
+    path = path_finder.find(from: [6, 6], to: [7, 6])
   end
 end

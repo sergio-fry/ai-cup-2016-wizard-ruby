@@ -5,13 +5,16 @@ module AiBot
     end
 
     def find(from:, to:)
+      from_node = @grid.node_at(*from)
+      to_node = @grid.node_at(*to)
+
       d = 0
       marks = {}
-      marks[from] = 0
+      marks[from_node] = 0
 
-      next_nodes = @grid.neighbors_for(from)
+      next_nodes = @grid.neighbors_for(from_node)
 
-      until marks.keys.include?(to)
+      until marks.keys.include?(to_node)
         d += 1
 
         next_nodes.each do |node|
@@ -22,13 +25,13 @@ module AiBot
         break if next_nodes.empty?
       end
 
-      return [] unless marks.keys.include?(to)
+      return [] unless marks.keys.include?(to_node)
 
-      inversed_path = [to]
+      inversed_path = [to_node]
 
-      current = to
+      current = to_node
 
-      until current == from
+      until current == from_node
         next_node = @grid.neighbors_for(current).find do |node|
           marks[node] == marks[current] - 1
         end

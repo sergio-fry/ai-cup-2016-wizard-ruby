@@ -16,7 +16,7 @@ module AiBot
 
       path_finder = PathFinder.new grid: grid
       path = path_finder.find(from: grid.node_mapped_from(me.x, me.y), to: grid.node_mapped_from(600, 3200))
-
+ 
 
       next_point = path[1]
       return if next_point.nil?
