@@ -15,8 +15,7 @@ module AiBot
       grid = Grid.build(units: units, center: me, radius: game.wizard_vision_range, size: 15)
 
       path_finder = PathFinder.new grid: grid
-      path = path_finder.find(from: grid.node_mapped_from(me.x, me.y), to: grid.node_mapped_from(600, 3200))
- 
+      path = path_finder.find(from: grid.mapper.to_grid(me.x, me.y), to: grid.mapper.to_grid(600, 3200))
 
       next_point = path[1]
       return if next_point.nil?

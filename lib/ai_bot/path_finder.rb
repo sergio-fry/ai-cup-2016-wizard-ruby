@@ -8,6 +8,16 @@ module AiBot
       from_node = @grid.node_at(*from)
       to_node = @grid.node_at(*to)
 
+      if from_node.nil?
+        from_node = Point.new(*from)
+        @grid.add_node from_node
+      end
+
+      if to_node.nil?
+        to_node = Point.new(*to)
+        @grid.add_node to_node
+      end
+
       d = 0
       marks = {}
       marks[from_node] = 0
