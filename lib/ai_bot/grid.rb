@@ -57,6 +57,12 @@ module AiBot
         end
       end
 
+      empty_cells.values.each do |cell|
+        if cell.distance_to(center) > radius
+          empty_cells.delete empty_cells.key(cell)
+        end
+      end
+
       empty_cells.keys.each do |x, y|
         grid.add_node AiBot::Point.new(x, y)
       end
